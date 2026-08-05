@@ -18,13 +18,17 @@ ecommerce/
 ├── .git/                    # repo do monorepo
 ├── .gitignore
 ├── .env.example             # variáveis para compose raiz
-├── docker-compose.yml       # RabbitMQ + auth-db + auth
+├── docker-compose.yml       # RabbitMQ + auth-db + auth + api-gateway
 ├── services/
-│   └── auth/                # único serviço parcialmente implementado
+│   ├── auth/                # microserviço de autenticação
+│   │   ├── app.ts
+│   │   ├── src/routes.ts
+│   │   ├── prisma/
+│   │   ├── docker-compose.yaml  # legado (preferir compose raiz)
+│   │   └── ...
+│   └── api-gateway/         # proxy HTTP na porta 3000
 │       ├── app.ts
-│       ├── src/routes.ts
-│       ├── prisma/
-│       ├── docker-compose.yaml  # legado (preferir compose raiz)
+│       ├── Dockerfile
 │       └── ...
 ├── packages/
 │   └── auth-middleware/     # lib JWT compartilhada (@ecommerce/auth-middleware)
@@ -45,6 +49,16 @@ ecommerce/
 - Docker Compose legado em `services/auth/` (app + Postgres)
 - **Compose raiz** (`docker-compose.yml`): RabbitMQ + `auth-db` + `auth` — auth ainda **não publica eventos** no broker
 
+### api-gateway (stub)
+
+- Express + TypeScript + `http-proxy-middleware`
+- `GET /health` → `{ status: 'ok' }`
+- Proxy para auth (paths preservados): `POST /api/users`, `POST /api/auth`, `GET /api/users`
+- Porta **3000** (`GATEWAY_PORT` / `API_GATEWAY_PORT`)
+- Upstream auth via `AUTH_SERVICE_URL` (`http://auth:3000` no Docker; `http://localhost:3001` local)
+- CORS habilitado; **sem** JWT no gateway ainda (TODO Fase 6 — `@ecommerce/auth-middleware`)
+- No compose raiz: depende de `auth`, expõe `:3000`
+
 ### auth-middleware
 
 - Pacote `@ecommerce/auth-middleware` — middleware Express para `Authorization: Bearer <token>`
@@ -59,14 +73,14 @@ ecommerce/
 
 | Item | Status |
 |------|--------|
-| Microserviços (8) | Só `services/auth` existe |
+| Microserviços (8) | `auth` + **api-gateway stub**; demais pendentes |
 | RabbitMQ | **No compose raiz** (auth ainda não conecta) |
-| api-gateway | Não iniciado |
+| api-gateway | **Stub feito** — proxy auth; JWT guard na Fase 6 |
 | Monorepo `services/` + `packages/` | **Feito** |
 | Hash de senha (bcrypt) | **Feito** |
 | JWT com expiry | **Feito** (`24h` default) |
 | Validação de input | **Feito** |
-| Compose raiz | **Feito** (RabbitMQ + auth-db + auth) |
+| Compose raiz | **Feito** (RabbitMQ + auth-db + auth + api-gateway) |
 | Eventos / consumers | Não (RabbitMQ sobe no stack; publishers na Fase 2+) |
 
 ---
@@ -87,4 +101,4 @@ ecommerce/
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 1: Foundation** (gateway stub).
+Seguir [roadmap.md](./roadmap.md) — **Fase 2: Catalog + Inventory**.

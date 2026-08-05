@@ -36,7 +36,7 @@ docs/                # arquitetura e roadmap
 docker-compose.yml   # raiz: serviços + DBs + RabbitMQ
 ```
 
-Código em `services/auth/` e `packages/auth-middleware/` (reorganização do monorepo concluída na Fase 1).
+Código em `services/auth/`, `services/api-gateway/` (stub) e `packages/auth-middleware/` (Fase 1 foundation concluída).
 
 ## Ao implementar
 

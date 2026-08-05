@@ -15,9 +15,9 @@ Leia a arquitetura antes de adicionar serviços, rotas ou eventos.
 
 ## Estado rápido
 
-- Implementado (parcial): `services/auth/`
+- Implementado: `services/auth/`, `services/api-gateway/` (stub)
 - Lib compartilhada: `packages/auth-middleware/`
-- Compose raiz: RabbitMQ + auth-db + auth
+- Compose raiz: RabbitMQ + auth-db + auth + api-gateway
 - Alvo: 8 serviços + lib JWT + RabbitMQ — ver docs
 
 ## Stack alvo
@@ -38,12 +38,25 @@ docker compose up --build
 
 | Serviço | URL / porta |
 |---------|-------------|
-| auth | http://localhost:3001 |
+| **api-gateway** | http://localhost:3000 |
+| auth (direto) | http://localhost:3001 |
 | RabbitMQ management | http://localhost:15672 (guest/guest por padrão) |
 | auth-db (host) | localhost:5433 |
 
-Endpoints do auth (direto, sem gateway ainda): `POST /api/users`, `POST /api/auth`, `GET /api/users` (Bearer JWT).
+Endpoints de auth via gateway (`:3000`) ou direto no auth (`:3001`): `POST /api/users`, `POST /api/auth`, `GET /api/users` (Bearer JWT).
+
+Health do gateway: `GET http://localhost:3000/health`
+
+## Desenvolvimento local (sem Docker para o gateway)
+
+Com auth já rodando (ex.: `docker compose up auth-db auth` ou auth na porta 3001):
+
+```bash
+cd services/api-gateway
+yarn install
+AUTH_SERVICE_URL=http://localhost:3001 yarn dev
+```
 
 ## Próximo passo
 
-Fase 1 do [roadmap](./docs/roadmap.md): **api-gateway stub** (proxy básico).
+Fase 2 do [roadmap](./docs/roadmap.md): **Catalog + Inventory**.

@@ -90,7 +90,7 @@ Ordem pensada para aprender uma peça por vez, sem subir 8 serviços vazios de u
 
 | Fase | Status |
 |------|--------|
-| 1. Foundation | Em progresso — monorepo reorganizado; **auth hardening feito**; **`@ecommerce/auth-middleware` implementado**; **compose raiz** (RabbitMQ + auth-db + auth); pendente: **gateway stub** |
+| 1. Foundation | **Concluída (foundation)** — monorepo, auth hardening, `@ecommerce/auth-middleware`, compose raiz, **api-gateway stub** (proxy auth). Polish fino pode continuar na Fase 7. |
 | 2. Catalog + Inventory | Pendente |
 | 3. Cart | Pendente |
 | 4. Orders + saga parcial | Pendente |

@@ -56,5 +56,18 @@ services:
       rabbitmq:
         condition: service_started
 
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    restart: unless-stopped
+    environment:
+      GATEWAY_PORT: "3000"
+      AUTH_SERVICE_URL: http://auth:3000
+    ports:
+      - "${GATEWAY_PORT:-3000}:3000"
+    depends_on:
+      - auth
+
 volumes:
   auth-db-data:
