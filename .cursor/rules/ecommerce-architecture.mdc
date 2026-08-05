@@ -1,0 +1,47 @@
+---
+description: Arquitetura e convenções do ecommerce (microserviços + RabbitMQ). Sempre aplicar.
+alwaysApply: true
+---
+
+# Ecommerce — memória permanente de arquitetura
+
+Este é um **lab de estudo** (overkill intencional) com microserviços e filas.
+
+## Fonte da verdade
+
+Antes de criar serviços, rotas, eventos ou mudar comunicação entre partes, leia e respeite:
+
+- `docs/architecture.md` — mapa, portas, eventos, saga, princípios
+- `docs/roadmap.md` — ordem das fases
+- `docs/current-state.md` — o que já existe no código
+
+Se a implementação divergir do desenho de propósito, **atualize os docs** no mesmo change.
+
+## Decisões travadas
+
+- Broker: **RabbitMQ**, exchange topic `ecommerce.events`
+- Escopo: **8 serviços** (`api-gateway`, `auth`, `catalog`, `cart`, `orders`, `inventory`, `payment`, `notifications`)
+- `auth-middleware` = **package compartilhado**, não microserviço
+- Saga de checkout: **coreografia** (sem orchestrator)
+- Stack: Node/TS + Express + Prisma + **Postgres por serviço**
+- HTTP síncrono para request/response; **eventos** para efeitos colaterais
+- Checkout: `202 PENDING` + processamento assíncrono via fila
+
+## Estrutura alvo
+
+```
+services/<nome>/     # um microserviço
+packages/auth-middleware/  # lib JWT
+docs/                # arquitetura e roadmap
+docker-compose.yml   # raiz: serviços + DBs + RabbitMQ
+```
+
+Hoje o código ainda está em `auth/` e `auth-middleware/` na raiz — migrar na Fase 1.
+
+## Ao implementar
+
+1. Siga a fase atual do `docs/roadmap.md`; não pule para 8 serviços vazios de uma vez.
+2. Novos eventos: documente routing key, publisher, payload e consumers em `docs/architecture.md`.
+3. Não compartilhe banco entre serviços.
+4. Não encadeie HTTP longo no checkout — use a saga por eventos.
+5. Consumers devem tender a ser **idempotentes** (obrigatório na fase Polish).
