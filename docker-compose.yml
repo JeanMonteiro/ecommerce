@@ -77,6 +77,27 @@ services:
       timeout: 5s
       retries: 5
 
+  cart-db:
+    image: postgres:13
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${CART_DB_NAME:-ecommerce_cart_database}
+      POSTGRES_USER: ${CART_DB_USER:-ecommerce_cart_user}
+      POSTGRES_PASSWORD: ${CART_DB_PASSWORD:-ecommerce_cart_pass}
+    ports:
+      - "${CART_DB_PORT:-5436}:5432"
+    volumes:
+      - cart-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${CART_DB_USER:-ecommerce_cart_user} -d ${CART_DB_NAME:-ecommerce_cart_database}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   auth:
     build:
       # Repo root context: auth depends on packages/auth-middleware (file:../../...)
@@ -134,6 +155,27 @@ services:
       rabbitmq:
         condition: service_started
 
+  cart:
+    build:
+      # Repo root context: cart depends on packages/auth-middleware (file:../../...)
+      context: .
+      dockerfile: services/cart/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      CART_PORT: "3000"
+      JWT_HASH: ${JWT_HASH:?JWT_HASH is required — copy .env.example to .env}
+      DATABASE_URL: postgresql://${CART_DB_USER:-ecommerce_cart_user}:${CART_DB_PASSWORD:-ecommerce_cart_pass}@cart-db:5432/${CART_DB_NAME:-ecommerce_cart_database}?schema=public
+      CATALOG_SERVICE_URL: http://catalog:3000
+    ports:
+      - "${CART_PORT:-3003}:3000"
+    depends_on:
+      cart-db:
+        condition: service_healthy
+      catalog:
+        condition: service_started
+
   api-gateway:
     build:
       context: .
@@ -144,14 +186,17 @@ services:
       AUTH_SERVICE_URL: http://auth:3000
       CATALOG_SERVICE_URL: http://catalog:3000
       INVENTORY_SERVICE_URL: http://inventory:3000
+      CART_SERVICE_URL: http://cart:3000
     ports:
       - "${GATEWAY_PORT:-3000}:3000"
     depends_on:
       - auth
       - catalog
       - inventory
+      - cart
 
 volumes:
   auth-db-data:
   catalog-db-data:
   inventory-db-data:
+  cart-db-data:
