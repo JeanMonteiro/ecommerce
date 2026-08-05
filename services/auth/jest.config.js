@@ -5,6 +5,9 @@ module.exports = {
   testEnvironment: 'node',
   testMatch: ['<rootDir>/src/**/*.spec.ts', '<rootDir>/src/**/*.test.ts'],
   modulePathIgnorePatterns: ['<rootDir>/dist/'],
+  moduleNameMapper: {
+    '^jsonwebtoken$': '<rootDir>/node_modules/jsonwebtoken',
+  },
   setupFiles: ['<rootDir>/src/tests/setup.env.ts'],
   setupFilesAfterEnv: ['<rootDir>/src/libs/__mocks__/prisma.singleton.ts'],
 };

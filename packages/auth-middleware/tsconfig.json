@@ -2,17 +2,15 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "commonjs",
+    "declaration": true,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
-    "types": ["node", "dotenv", "./custom.d.ts", "jest"]
+    "rootDir": "./src",
+    "types": ["node", "./custom.d.ts", "jest"]
   },
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules", "dist"
-  ]
+  "include": ["src/**/*.ts", "src/types/express.d.ts"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
 }

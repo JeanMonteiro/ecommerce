@@ -25,7 +25,7 @@ ecommerce/
 │       ├── docker-compose.yaml  # só deste serviço
 │       └── ...
 ├── packages/
-│   └── auth-middleware/     # stub vazio (app.ts / index.js vazios)
+│   └── auth-middleware/     # lib JWT compartilhada (@ecommerce/auth-middleware)
 └── docs/                    # documentação de arquitetura (este diretório)
 ```
 
@@ -44,8 +44,11 @@ ecommerce/
 
 ### auth-middleware
 
-- Pasta em `packages/auth-middleware`, **sem implementação**
-- Lib compartilhada (verificação JWT) — não é microserviço
+- Pacote `@ecommerce/auth-middleware` — middleware Express para `Authorization: Bearer <token>`
+- Verifica JWT com `jsonwebtoken` + `JWT_HASH`; expõe `req.user` (`userId`, `username`)
+- Respostas 401 JSON em falha; testes unitários com `jwt.verify` mockado
+- Consumido por `services/auth` em `GET /api/users` (dependência `file:../../packages/auth-middleware`)
+- Lib compartilhada — **não** é microserviço; sem Prisma/DB
 
 ---
 
@@ -75,10 +78,10 @@ ecommerce/
 6. Dockerfile sem `CMD`; command do compose comentado
 7. ~~`bodyParser` redundante / depois das rotas~~ — **resolvido**
 8. `tsconfig` pode não incluir `app.ts` na raiz do serviço
-9. Verificação JWT inline nas rotas — extrair para `packages/auth-middleware` (próximo passo)
+9. ~~Verificação JWT inline nas rotas~~ — **resolvido** (`@ecommerce/auth-middleware`)
 
 ---
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 1: Foundation** (endurecer auth, extrair middleware JWT, compose raiz, gateway stub).
+Seguir [roadmap.md](./roadmap.md) — **Fase 1: Foundation** (compose raiz com RabbitMQ + auth, gateway stub).

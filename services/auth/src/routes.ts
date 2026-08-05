@@ -1,20 +1,12 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import { authMiddleware } from '@ecommerce/auth-middleware';
 import prisma from './libs/prisma';
-import { getJwtSecret, signToken } from './config/jwt';
+import { signToken } from './config/jwt';
 import { validateAuthInput } from './validation/auth';
 
 const router = express.Router();
 const BCRYPT_ROUNDS = 10;
-
-function getBearerToken(req: Request): string | null {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  return authHeader.slice(7);
-}
 
 router.post('/api/users', async function (req: Request, res: Response) {
   try {
@@ -82,19 +74,8 @@ router.post('/api/auth', async function (req: Request, res: Response) {
   }
 });
 
-router.get('/api/users', async function (req: Request, res: Response) {
+router.get('/api/users', authMiddleware, async function (req: Request, res: Response) {
   try {
-    const token = getBearerToken(req);
-    if (!token) {
-      return res.status(401).send({ message: 'Authentication required' });
-    }
-
-    try {
-      jwt.verify(token, getJwtSecret());
-    } catch {
-      return res.status(401).send({ message: 'Invalid or expired token' });
-    }
-
     const users = await prisma.user.findMany({
       select: {
         id: true,
