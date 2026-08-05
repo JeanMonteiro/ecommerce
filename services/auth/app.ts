@@ -1,21 +1,18 @@
 import express from 'express';
 import cors from 'cors';
-import routes from './src/routes';
-import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
+import routes from './src/routes';
+import { getJwtSecret } from './src/config/jwt';
 
-// Load environment variables from .env file
 dotenv.config();
+getJwtSecret();
 
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
-app.use(routes)
-app.use(bodyParser.json())
+app.use(routes);
 
-// Start server
 const AUTH_PORT = process.env.AUTH_PORT || 3000;
 const server = app.listen(AUTH_PORT, () => {
   console.log(`Server is running on port ${AUTH_PORT}`);

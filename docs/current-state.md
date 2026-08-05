@@ -34,9 +34,12 @@ ecommerce/
 ### auth (parcial)
 
 - Express + TypeScript + Prisma + PostgreSQL
-- Endpoints: `POST /api/users`, `POST /api/auth`, `GET /api/users`
-- JWT na criação/login
-- Testes Jest + Supertest com Prisma mockado
+- Endpoints: `POST /api/users`, `POST /api/auth`, `GET /api/users` (JWT obrigatório)
+- Senhas com **bcrypt** (hash no register, compare no login)
+- JWT com **`expiresIn`** (`24h` por padrão; `JWT_EXPIRES_IN` opcional)
+- Validação de input (username trim, password mín. 6 caracteres)
+- `JWT_HASH` obrigatório no startup
+- Testes Jest + Supertest com Prisma/bcrypt mockados
 - Docker Compose local (app + Postgres)
 
 ### auth-middleware
@@ -54,9 +57,9 @@ ecommerce/
 | RabbitMQ | Não iniciado |
 | api-gateway | Não iniciado |
 | Monorepo `services/` + `packages/` | **Feito** |
-| Hash de senha (bcrypt) | Dependência presente, **não usada** |
-| JWT com expiry | Não |
-| Validação de input | Não |
+| Hash de senha (bcrypt) | **Feito** |
+| JWT com expiry | **Feito** (`24h` default) |
+| Validação de input | **Feito** |
 | Compose raiz | Não |
 | Eventos / consumers | Não |
 
@@ -64,14 +67,15 @@ ecommerce/
 
 ## Débitos conhecidos no auth (corrigir na Fase 1)
 
-1. Senha em texto puro no banco (usar bcrypt)
-2. JWT sem `expiresIn`
-3. `GET /api/users` sem autenticação
-4. Sem validação de body (username/password)
+1. ~~Senha em texto puro no banco~~ — **resolvido** (bcrypt)
+2. ~~JWT sem `expiresIn`~~ — **resolvido**
+3. ~~`GET /api/users` sem autenticação~~ — **resolvido** (Bearer JWT)
+4. ~~Sem validação de body~~ — **resolvido**
 5. `DATABASE_URL` no compose usa `${DB_PORT}` — dentro da rede Docker deve ser `5432`
 6. Dockerfile sem `CMD`; command do compose comentado
-7. `bodyParser` redundante / depois das rotas
+7. ~~`bodyParser` redundante / depois das rotas~~ — **resolvido**
 8. `tsconfig` pode não incluir `app.ts` na raiz do serviço
+9. Verificação JWT inline nas rotas — extrair para `packages/auth-middleware` (próximo passo)
 
 ---
 

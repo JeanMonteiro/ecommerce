@@ -90,7 +90,7 @@ Ordem pensada para aprender uma peça por vez, sem subir 8 serviços vazios de u
 
 | Fase | Status |
 |------|--------|
-| 1. Foundation | Em progresso — monorepo reorganizado (`services/auth`, `packages/auth-middleware`); restante pendente |
+| 1. Foundation | Em progresso — monorepo reorganizado; **auth hardening feito** (bcrypt, JWT expiry, validação, `GET /api/users` protegido); pendente: `packages/auth-middleware`, compose raiz, gateway stub |
 | 2. Catalog + Inventory | Pendente |
 | 3. Cart | Pendente |
 | 4. Orders + saga parcial | Pendente |
