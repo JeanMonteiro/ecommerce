@@ -26,12 +26,17 @@ ecommerce/
 │   │   ├── prisma/
 │   │   ├── docker-compose.yaml  # legado (preferir compose raiz)
 │   │   └── ...
-│   └── api-gateway/         # proxy HTTP na porta 3000
+│   ├── api-gateway/         # proxy HTTP na porta 3000
+│   │   ├── app.ts
+│   │   ├── Dockerfile
+│   │   └── ...
+│   └── catalog/             # microserviço de catálogo (Fase 2)
 │       ├── app.ts
-│       ├── Dockerfile
+│       ├── prisma/
 │       └── ...
 ├── packages/
-│   └── auth-middleware/     # lib JWT compartilhada (@ecommerce/auth-middleware)
+│   ├── auth-middleware/     # lib JWT compartilhada (@ecommerce/auth-middleware)
+│   └── messaging/           # lib RabbitMQ (@ecommerce/messaging)
 └── docs/                    # documentação de arquitetura (este diretório)
 ```
 
@@ -67,21 +72,38 @@ ecommerce/
 - Consumido por `services/auth` em `GET /api/users` (dependência `file:../../packages/auth-middleware`)
 - Lib compartilhada — **não** é microserviço; sem Prisma/DB
 
+### messaging
+
+- Pacote `@ecommerce/messaging` — helpers RabbitMQ compartilhados
+- `createMessagingClient()` conecta via `RABBITMQ_URL` (default `amqp://guest:guest@localhost:5672`)
+- Assert topic exchange `ecommerce.events`; `publish(routingKey, payload)` e `subscribe(pattern, queue, handler)`
+- Consumido por `services/catalog` (e futuramente `inventory`)
+
+### catalog (Fase 2 — parcial)
+
+- Express + TypeScript + Prisma + PostgreSQL
+- Endpoints: `GET /api/products`, `GET /api/products/:id`, `POST /api/products`, `PUT/PATCH /api/products/:id`
+- Validação: `name` não vazio, `price >= 0`
+- Publica `product.created` no create e `product.updated` no update (via `@ecommerce/messaging`)
+- Porta **3002** local (`CATALOG_PORT`); **3000** no container Docker
+- Testes Jest + Supertest com Prisma e publish mockados
+- **Compose raiz:** ainda **não** inclui `catalog-db` / `catalog` (próximo passo da Fase 2)
+
 ---
 
 ## Lacunas vs arquitetura alvo
 
 | Item | Status |
 |------|--------|
-| Microserviços (8) | `auth` + **api-gateway stub**; demais pendentes |
-| RabbitMQ | **No compose raiz** (auth ainda não conecta) |
+| Microserviços (8) | `auth` + **api-gateway stub** + **`catalog`**; demais pendentes |
+| RabbitMQ | **No compose raiz**; **`catalog` publica eventos** (`product.created`, `product.updated`) |
 | api-gateway | **Stub feito** — proxy auth; JWT guard na Fase 6 |
 | Monorepo `services/` + `packages/` | **Feito** |
 | Hash de senha (bcrypt) | **Feito** |
 | JWT com expiry | **Feito** (`24h` default) |
 | Validação de input | **Feito** |
 | Compose raiz | **Feito** (RabbitMQ + auth-db + auth + api-gateway) |
-| Eventos / consumers | Não (RabbitMQ sobe no stack; publishers na Fase 2+) |
+| Eventos / consumers | **`catalog` publica** `product.created` / `product.updated`; consumers (inventory) pendentes |
 
 ---
 
@@ -101,4 +123,4 @@ ecommerce/
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 2: Catalog + Inventory**.
+Seguir [roadmap.md](./roadmap.md) — **Fase 2: Catalog + Inventory** (`catalog` feito; wiring compose + `inventory` consumer pendente).
