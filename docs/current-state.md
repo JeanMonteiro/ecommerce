@@ -34,7 +34,11 @@ ecommerce/
 │   │   ├── app.ts
 │   │   ├── prisma/
 │   │   └── ...
-│   └── inventory/           # microserviço de estoque (Fase 2)
+│   ├── inventory/           # microserviço de estoque (Fase 2)
+│   │   ├── app.ts
+│   │   ├── prisma/
+│   │   └── ...
+│   └── cart/                # microserviço de carrinho (Fase 3 — Step 1)
 │       ├── app.ts
 │       ├── prisma/
 │       └── ...
@@ -95,6 +99,16 @@ ecommerce/
 - Testes Jest + Supertest com Prisma e publish mockados
 - **Compose raiz:** `catalog-db` + `catalog` com `DATABASE_URL` e `RABBITMQ_URL`
 
+### cart (Fase 3 — Step 1 concluído)
+
+- Express + TypeScript + Prisma + PostgreSQL
+- Endpoints (JWT obrigatório via `@ecommerce/auth-middleware`): `GET /api/cart`, `POST /api/cart`, `PATCH /api/cart/:productId`, `DELETE /api/cart/:productId`, `DELETE /api/cart`
+- HTTP interno para `catalog`: `GET /api/products/:id` via `CATALOG_SERVICE_URL` (valida produto + snapshot de preço/nome)
+- Porta **3003** local (`CART_PORT`); **3000** no container Docker
+- Testes Jest + Supertest com Prisma e catalog client mockados
+- **Compose/gateway:** pendente (Fase 3 Step 2)
+- **TODO Fase 5:** consumer `order.confirmed` → limpar carrinho
+
 ### inventory (Fase 2 — concluído)
 
 - Express + TypeScript + Prisma + PostgreSQL
@@ -138,7 +152,7 @@ sequenceDiagram
 
 | Item | Status |
 |------|--------|
-| Microserviços (8) | `auth` + **api-gateway** + **`catalog`** + **`inventory`**; demais pendentes |
+| Microserviços (8) | `auth` + **api-gateway** + **`catalog`** + **`inventory`** + **`cart`** (Step 1); demais pendentes |
 | RabbitMQ | **No compose raiz**; **`catalog` publica** eventos; **`inventory` consome** `product.created` |
 | api-gateway | **Stub Fase 2** — proxy auth + catalog + inventory; JWT guard na Fase 6 |
 | Monorepo `services/` + `packages/` | **Feito** |
@@ -166,4 +180,4 @@ sequenceDiagram
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 3: Cart** (carrinho add/remove/list; HTTP interno para `catalog`).
+Seguir [roadmap.md](./roadmap.md) — **Fase 3 Step 2:** wire `cart-db` + `cart` no compose raiz e proxy `/api/cart` no api-gateway.
