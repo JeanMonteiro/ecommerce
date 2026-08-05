@@ -35,6 +35,48 @@ services:
       timeout: 5s
       retries: 5
 
+  catalog-db:
+    image: postgres:13
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${CATALOG_DB_NAME:-ecommerce_catalog_database}
+      POSTGRES_USER: ${CATALOG_DB_USER:-ecommerce_catalog_user}
+      POSTGRES_PASSWORD: ${CATALOG_DB_PASSWORD:-ecommerce_catalog_pass}
+    ports:
+      - "${CATALOG_DB_PORT:-5434}:5432"
+    volumes:
+      - catalog-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${CATALOG_DB_USER:-ecommerce_catalog_user} -d ${CATALOG_DB_NAME:-ecommerce_catalog_database}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  inventory-db:
+    image: postgres:13
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${INVENTORY_DB_NAME:-ecommerce_inventory_database}
+      POSTGRES_USER: ${INVENTORY_DB_USER:-ecommerce_inventory_user}
+      POSTGRES_PASSWORD: ${INVENTORY_DB_PASSWORD:-ecommerce_inventory_pass}
+    ports:
+      - "${INVENTORY_DB_PORT:-5435}:5432"
+    volumes:
+      - inventory-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${INVENTORY_DB_USER:-ecommerce_inventory_user} -d ${INVENTORY_DB_NAME:-ecommerce_inventory_database}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   auth:
     build:
       # Repo root context: auth depends on packages/auth-middleware (file:../../...)
@@ -56,6 +98,42 @@ services:
       rabbitmq:
         condition: service_started
 
+  catalog:
+    build:
+      # Repo root context: catalog depends on packages/messaging (file:../../...)
+      context: .
+      dockerfile: services/catalog/Dockerfile
+    restart: unless-stopped
+    environment:
+      CATALOG_PORT: "3000"
+      DATABASE_URL: postgresql://${CATALOG_DB_USER:-ecommerce_catalog_user}:${CATALOG_DB_PASSWORD:-ecommerce_catalog_pass}@catalog-db:5432/${CATALOG_DB_NAME:-ecommerce_catalog_database}?schema=public
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
+    ports:
+      - "${CATALOG_PORT:-3002}:3000"
+    depends_on:
+      catalog-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+
+  inventory:
+    build:
+      # Repo root context: inventory depends on packages/messaging (file:../../...)
+      context: .
+      dockerfile: services/inventory/Dockerfile
+    restart: unless-stopped
+    environment:
+      INVENTORY_PORT: "3000"
+      DATABASE_URL: postgresql://${INVENTORY_DB_USER:-ecommerce_inventory_user}:${INVENTORY_DB_PASSWORD:-ecommerce_inventory_pass}@inventory-db:5432/${INVENTORY_DB_NAME:-ecommerce_inventory_database}?schema=public
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
+    ports:
+      - "${INVENTORY_PORT:-3005}:3000"
+    depends_on:
+      inventory-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+
   api-gateway:
     build:
       context: .
@@ -64,10 +142,16 @@ services:
     environment:
       GATEWAY_PORT: "3000"
       AUTH_SERVICE_URL: http://auth:3000
+      CATALOG_SERVICE_URL: http://catalog:3000
+      INVENTORY_SERVICE_URL: http://inventory:3000
     ports:
       - "${GATEWAY_PORT:-3000}:3000"
     depends_on:
       - auth
+      - catalog
+      - inventory
 
 volumes:
   auth-db-data:
+  catalog-db-data:
+  inventory-db-data:
