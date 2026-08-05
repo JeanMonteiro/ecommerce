@@ -9,7 +9,7 @@ Atualize este arquivo quando a estrutura mudar de forma relevante.
 
 - Repositório único na raiz `ecommerce/` (monorepo)
 - O `.git` antigo em `auth/` foi removido
-- Ainda sem commits / remote
+- Remote: [github.com/JeanMonteiro/ecommerce](https://github.com/JeanMonteiro/ecommerce) (**público**, conta pessoal — não é org da empresa)
 
 ## O que existe hoje
 
