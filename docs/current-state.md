@@ -34,6 +34,10 @@ ecommerce/
 │       ├── app.ts
 │       ├── prisma/
 │       └── ...
+│   └── inventory/           # microserviço de estoque (Fase 2)
+│       ├── app.ts
+│       ├── prisma/
+│       └── ...
 ├── packages/
 │   ├── auth-middleware/     # lib JWT compartilhada (@ecommerce/auth-middleware)
 │   └── messaging/           # lib RabbitMQ (@ecommerce/messaging)
@@ -77,7 +81,7 @@ ecommerce/
 - Pacote `@ecommerce/messaging` — helpers RabbitMQ compartilhados
 - `createMessagingClient()` conecta via `RABBITMQ_URL` (default `amqp://guest:guest@localhost:5672`)
 - Assert topic exchange `ecommerce.events`; `publish(routingKey, payload)` e `subscribe(pattern, queue, handler)`
-- Consumido por `services/catalog` (e futuramente `inventory`)
+- Consumido por `services/catalog` e `services/inventory`
 
 ### catalog (Fase 2 — parcial)
 
@@ -89,21 +93,30 @@ ecommerce/
 - Testes Jest + Supertest com Prisma e publish mockados
 - **Compose raiz:** ainda **não** inclui `catalog-db` / `catalog` (próximo passo da Fase 2)
 
+### inventory (Fase 2 — parcial)
+
+- Express + TypeScript + Prisma + PostgreSQL
+- Endpoints: `GET /api/inventory`, `GET /api/inventory/:productId`, `PATCH /api/inventory/:productId`
+- Consome `product.created` via `@ecommerce/messaging` (queue `inventory.product-created`) — cria stock com quantity **0** (idempotente)
+- Porta **3005** local (`INVENTORY_PORT`); **3000** no container Docker
+- Testes Jest + Supertest com Prisma e messaging mockados
+- **Compose raiz / gateway:** ainda **não** inclui `inventory-db` / `inventory` (Step 3 da Fase 2)
+
 ---
 
 ## Lacunas vs arquitetura alvo
 
 | Item | Status |
 |------|--------|
-| Microserviços (8) | `auth` + **api-gateway stub** + **`catalog`**; demais pendentes |
-| RabbitMQ | **No compose raiz**; **`catalog` publica eventos** (`product.created`, `product.updated`) |
+| Microserviços (8) | `auth` + **api-gateway stub** + **`catalog`** + **`inventory`**; demais pendentes |
+| RabbitMQ | **No compose raiz**; **`catalog` publica** eventos; **`inventory` consome** `product.created` |
 | api-gateway | **Stub feito** — proxy auth; JWT guard na Fase 6 |
 | Monorepo `services/` + `packages/` | **Feito** |
 | Hash de senha (bcrypt) | **Feito** |
 | JWT com expiry | **Feito** (`24h` default) |
 | Validação de input | **Feito** |
 | Compose raiz | **Feito** (RabbitMQ + auth-db + auth + api-gateway) |
-| Eventos / consumers | **`catalog` publica** `product.created` / `product.updated`; consumers (inventory) pendentes |
+| Eventos / consumers | **`catalog` publica** `product.created` / `product.updated`; **`inventory` consome** `product.created` |
 
 ---
 
@@ -123,4 +136,4 @@ ecommerce/
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 2: Catalog + Inventory** (`catalog` feito; wiring compose + `inventory` consumer pendente).
+Seguir [roadmap.md](./roadmap.md) — **Fase 2: Catalog + Inventory** (`catalog` + `inventory` feitos; wiring compose + gateway pendente — Step 3).
