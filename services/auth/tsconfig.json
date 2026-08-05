@@ -10,7 +10,8 @@
     "types": ["node", "dotenv", "./custom.d.ts", "jest"]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "app.ts"
   ],
   "exclude": [
     "node_modules", "dist"

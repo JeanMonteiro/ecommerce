@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+**/data
+**/coverage
+.git
+.cursor
+docs
+**/*.md
+!services/auth/prisma/**

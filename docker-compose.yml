@@ -1,0 +1,60 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-db:
+    image: postgres:13
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME:-ecommerce_auth_database}
+      POSTGRES_USER: ${AUTH_DB_USER:-ecommerce_auth_user}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-ecommerce_auth_pass}
+    ports:
+      - "${AUTH_DB_PORT:-5433}:5432"
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${AUTH_DB_USER:-ecommerce_auth_user} -d ${AUTH_DB_NAME:-ecommerce_auth_database}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth:
+    build:
+      # Repo root context: auth depends on packages/auth-middleware (file:../../...)
+      context: .
+      dockerfile: services/auth/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      AUTH_PORT: "3000"
+      JWT_HASH: ${JWT_HASH:?JWT_HASH is required — copy .env.example to .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      DATABASE_URL: postgresql://${AUTH_DB_USER:-ecommerce_auth_user}:${AUTH_DB_PASSWORD:-ecommerce_auth_pass}@auth-db:5432/${AUTH_DB_NAME:-ecommerce_auth_database}?schema=public
+    ports:
+      - "${AUTH_PORT:-3001}:3000"
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+
+volumes:
+  auth-db-data:

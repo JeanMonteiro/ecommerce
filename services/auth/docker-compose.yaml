@@ -1,3 +1,6 @@
+# Legacy single-service compose. Prefer the root stack:
+#   cp .env.example .env   # from repo root
+#   docker compose up --build
 version: '3.9'
 services:
   db:

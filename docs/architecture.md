@@ -266,29 +266,42 @@ Cada serviço: Express + Prisma + Postgres próprio + publisher/consumer RabbitM
 
 ---
 
-## Compose raiz (esqueleto)
+## Compose raiz
+
+Arquivo **`docker-compose.yml`** na raiz do monorepo.
+
+**Fase 1 (implementado):** `rabbitmq`, `auth-db`, `auth`.  
+**Próximas fases:** demais DBs e serviços conforme o roadmap.
+
+| Serviço | Imagem / build | Portas (host) |
+|---------|----------------|---------------|
+| rabbitmq | `rabbitmq:3-management` | 5672 (AMQP), 15672 (UI) |
+| auth-db | `postgres:13` | 5433 → 5432 (default no `.env.example`) |
+| auth | build `services/auth/Dockerfile` (contexto = raiz do repo) | 3001 → 3000 |
+
+Onboarding: `cp .env.example .env`, editar `JWT_HASH`, depois `docker compose up --build`.
+
+O build do `auth` usa contexto na **raiz** do monorepo porque depende de `packages/auth-middleware` (`file:../../...`). Auth ainda **não publica** eventos no RabbitMQ — o broker sobe no stack para as fases seguintes.
+
+Esqueleto alvo (serviços futuros):
 
 ```yaml
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports: ["5672:5672", "15672:15672"]
-
-  auth-db:
-  catalog-db:
-  cart-db:
-  orders-db:
-  inventory-db:
-  payment-db:
-
-  auth:
-  catalog:
-  cart:
-  orders:
-  inventory:
-  payment:
-  notifications:
-  api-gateway:
+  rabbitmq: ...
+  auth-db: ...
+  catalog-db: ...
+  cart-db: ...
+  orders-db: ...
+  inventory-db: ...
+  payment-db: ...
+  auth: ...
+  catalog: ...
+  cart: ...
+  orders: ...
+  inventory: ...
+  payment: ...
+  notifications: ...
+  api-gateway: ...
 ```
 
 Preferência pedagógica: **um container Postgres por serviço** (ou um Postgres com vários databases, se o Compose ficar pesado demais no início).
