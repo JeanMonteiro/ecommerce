@@ -249,7 +249,7 @@ ecommerce/
 │   └── auth-middleware/         # lib JWT — NÃO é serviço
 ├── services/
 │   ├── api-gateway/
-│   ├── auth/                    # existe hoje na raiz (mover)
+│   ├── auth/
 │   ├── catalog/
 │   ├── cart/
 │   ├── orders/

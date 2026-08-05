@@ -15,8 +15,8 @@ Leia a arquitetura antes de adicionar serviços, rotas ou eventos.
 
 ## Estado rápido
 
-- Implementado (parcial): `auth/`
-- Stub: `auth-middleware/`
+- Implementado (parcial): `services/auth/`
+- Stub: `packages/auth-middleware/`
 - Alvo: 8 serviços + lib JWT + RabbitMQ — ver docs
 
 ## Stack alvo

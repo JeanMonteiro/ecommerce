@@ -17,15 +17,19 @@ Atualize este arquivo quando a estrutura mudar de forma relevante.
 ecommerce/
 ├── .git/                    # repo do monorepo
 ├── .gitignore
-├── auth/                    # único serviço parcialmente implementado
-│   ├── app.ts
-│   ├── src/routes.ts
-│   ├── prisma/
-│   ├── docker-compose.yaml  # só deste serviço
-│   └── ...
-├── auth-middleware/         # stub vazio (app.ts / index.js vazios)
+├── services/
+│   └── auth/                # único serviço parcialmente implementado
+│       ├── app.ts
+│       ├── src/routes.ts
+│       ├── prisma/
+│       ├── docker-compose.yaml  # só deste serviço
+│       └── ...
+├── packages/
+│   └── auth-middleware/     # stub vazio (app.ts / index.js vazios)
 └── docs/                    # documentação de arquitetura (este diretório)
 ```
+
+**Nota:** reorganização do monorepo (`services/` + `packages/`) concluída na Fase 1.
 
 ### auth (parcial)
 
@@ -37,8 +41,8 @@ ecommerce/
 
 ### auth-middleware
 
-- Pasta criada, **sem implementação**
-- Destino: virar `packages/auth-middleware` (lib, não serviço)
+- Pasta em `packages/auth-middleware`, **sem implementação**
+- Lib compartilhada (verificação JWT) — não é microserviço
 
 ---
 
@@ -46,10 +50,10 @@ ecommerce/
 
 | Item | Status |
 |------|--------|
-| Microserviços (8) | Só `auth` existe |
+| Microserviços (8) | Só `services/auth` existe |
 | RabbitMQ | Não iniciado |
 | api-gateway | Não iniciado |
-| Monorepo `services/` + `packages/` | Não iniciado |
+| Monorepo `services/` + `packages/` | **Feito** |
 | Hash de senha (bcrypt) | Dependência presente, **não usada** |
 | JWT com expiry | Não |
 | Validação de input | Não |
@@ -73,4 +77,4 @@ ecommerce/
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 1: Foundation**.
+Seguir [roadmap.md](./roadmap.md) — **Fase 1: Foundation** (endurecer auth, extrair middleware JWT, compose raiz, gateway stub).
