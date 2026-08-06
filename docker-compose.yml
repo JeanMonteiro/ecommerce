@@ -98,6 +98,27 @@ services:
       timeout: 5s
       retries: 5
 
+  orders-db:
+    image: postgres:13
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${ORDERS_DB_NAME:-ecommerce_orders_database}
+      POSTGRES_USER: ${ORDERS_DB_USER:-ecommerce_orders_user}
+      POSTGRES_PASSWORD: ${ORDERS_DB_PASSWORD:-ecommerce_orders_pass}
+    ports:
+      - "${ORDERS_DB_PORT:-5437}:5432"
+    volumes:
+      - orders-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${ORDERS_DB_USER:-ecommerce_orders_user} -d ${ORDERS_DB_NAME:-ecommerce_orders_database}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   auth:
     build:
       # Repo root context: auth depends on packages/auth-middleware (file:../../...)
@@ -176,6 +197,30 @@ services:
       catalog:
         condition: service_started
 
+  orders:
+    build:
+      # Repo root context: orders depends on packages/auth-middleware + messaging (file:../../...)
+      context: .
+      dockerfile: services/orders/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      ORDERS_PORT: "3000"
+      JWT_HASH: ${JWT_HASH:?JWT_HASH is required — copy .env.example to .env}
+      DATABASE_URL: postgresql://${ORDERS_DB_USER:-ecommerce_orders_user}:${ORDERS_DB_PASSWORD:-ecommerce_orders_pass}@orders-db:5432/${ORDERS_DB_NAME:-ecommerce_orders_database}?schema=public
+      CART_SERVICE_URL: http://cart:3000
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
+    ports:
+      - "${ORDERS_PORT:-3004}:3000"
+    depends_on:
+      orders-db:
+        condition: service_healthy
+      cart:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+
   api-gateway:
     build:
       context: .
@@ -187,6 +232,7 @@ services:
       CATALOG_SERVICE_URL: http://catalog:3000
       INVENTORY_SERVICE_URL: http://inventory:3000
       CART_SERVICE_URL: http://cart:3000
+      ORDERS_SERVICE_URL: http://orders:3000
     ports:
       - "${GATEWAY_PORT:-3000}:3000"
     depends_on:
@@ -194,9 +240,11 @@ services:
       - catalog
       - inventory
       - cart
+      - orders
 
 volumes:
   auth-db-data:
   catalog-db-data:
   inventory-db-data:
   cart-db-data:
+  orders-db-data:

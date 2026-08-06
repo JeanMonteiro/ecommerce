@@ -18,7 +18,7 @@ ecommerce/
 ├── .git/                    # repo do monorepo
 ├── .gitignore
 ├── .env.example             # variáveis para compose raiz
-├── docker-compose.yml       # RabbitMQ + auth-db + catalog-db + inventory-db + cart-db + serviços + api-gateway
+├── docker-compose.yml       # RabbitMQ + auth-db + catalog-db + inventory-db + cart-db + orders-db + serviços + api-gateway
 ├── services/
 │   ├── auth/                # microserviço de autenticação
 │   │   ├── app.ts
@@ -42,7 +42,7 @@ ecommerce/
 │   │   ├── app.ts
 │   │   ├── prisma/
 │   │   └── ...
-│   └── orders/              # microserviço de pedidos (Fase 4 — em progresso)
+│   └── orders/              # microserviço de pedidos (Fase 4 — concluído)
 │       ├── app.ts
 │       ├── prisma/
 │       └── ...
@@ -66,7 +66,7 @@ ecommerce/
 - Docker Compose legado em `services/auth/` (app + Postgres)
 - **Compose raiz** (`docker-compose.yml`): RabbitMQ + `auth-db` + `auth` — auth ainda **não publica eventos** no broker
 
-### api-gateway (stub — Fase 3)
+### api-gateway (stub — Fase 4)
 
 - Express + TypeScript + `http-proxy-middleware`
 - `GET /health` → `{ status: 'ok' }`
@@ -74,10 +74,11 @@ ecommerce/
 - Proxy para catalog: `/api/products` (CRUD produtos)
 - Proxy para inventory: `/api/inventory` (consulta/atualização de estoque)
 - Proxy para cart: `/api/cart` (carrinho — JWT validado no serviço cart)
+- Proxy para orders: `/api/orders` (checkout — JWT validado no serviço orders)
 - Porta **3000** (`GATEWAY_PORT` / `API_GATEWAY_PORT`)
-- Upstreams via env (`AUTH_SERVICE_URL`, `CATALOG_SERVICE_URL`, `INVENTORY_SERVICE_URL`, `CART_SERVICE_URL`)
+- Upstreams via env (`AUTH_SERVICE_URL`, `CATALOG_SERVICE_URL`, `INVENTORY_SERVICE_URL`, `CART_SERVICE_URL`, `ORDERS_SERVICE_URL`)
 - CORS habilitado; **sem** JWT no gateway ainda (TODO Fase 6 — `@ecommerce/auth-middleware`)
-- No compose raiz: depende de `auth`, `catalog`, `inventory`, `cart`; expõe `:3000`
+- No compose raiz: depende de `auth`, `catalog`, `inventory`, `cart`, `orders`; expõe `:3000`
 
 ### auth-middleware
 
@@ -92,7 +93,7 @@ ecommerce/
 - Pacote `@ecommerce/messaging` — helpers RabbitMQ compartilhados
 - `createMessagingClient()` conecta via `RABBITMQ_URL` (default `amqp://guest:guest@localhost:5672`)
 - Assert topic exchange `ecommerce.events`; `publish(routingKey, payload)` e `subscribe(pattern, queue, handler)`
-- Consumido por `services/catalog` e `services/inventory`
+- Consumido por `services/catalog`, `services/inventory` e `services/orders`
 
 ### catalog (Fase 2 — concluído)
 
@@ -115,7 +116,7 @@ ecommerce/
 - **Gateway:** proxy `/api/cart`
 - **TODO Fase 5:** consumer `order.confirmed` → limpar carrinho
 
-### orders (Fase 4 — em progresso, Step 1)
+### orders (Fase 4 — concluído)
 
 - Express + TypeScript + Prisma + PostgreSQL
 - Endpoints (JWT via `@ecommerce/auth-middleware`): `POST /api/orders` (202 PENDING), `GET /api/orders`, `GET /api/orders/:id`
@@ -124,11 +125,9 @@ ecommerce/
 - Consome `stock.reserved` / `stock.rejected` (queue `orders.stock-events`, pattern `stock.*`) → atualiza status (`AWAITING_PAYMENT` / `CANCELLED`)
 - Porta **3004** local (`ORDERS_PORT`); **3000** no container Docker
 - Testes Jest + Supertest com Prisma, messaging e cart client mockados
-- **Compose raiz:** `orders-db` + `orders` — **pendente** (próximo passo da Fase 4)
-- **Gateway:** proxy `/api/orders` — **pendente**
-- **Próximo passo Fase 4:** `inventory` consome `order.created` e reserva estoque
-
-- **Próximo passo Fase 4:** compose + gateway para `orders` (Step 3)
+- **Compose raiz:** `orders-db` + `orders` com `DATABASE_URL`, `JWT_HASH`, `CART_SERVICE_URL` e `RABBITMQ_URL`
+- **Gateway:** proxy `/api/orders`
+- **Próximo passo Fase 5:** `payment` mock + fechar saga (`payment.succeeded` / `payment.failed`)
 
 ### inventory (Fase 2 + Fase 4 Step 2)
 
@@ -181,18 +180,61 @@ sequenceDiagram
 
 ---
 
+## Fluxo saga parcial (Fase 4)
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant GW as api-gateway
+  participant Cart as cart
+  participant Orders as orders
+  participant MQ as RabbitMQ
+  participant Inv as inventory
+
+  Client->>GW: POST /api/orders (Bearer JWT)
+  GW->>Orders: POST /api/orders
+  Orders->>Cart: GET /api/cart (HTTP sync, JWT repassado)
+  Cart-->>Orders: cart items
+  Orders->>Orders: persist order (PENDING)
+  Orders->>MQ: publish order.created
+  Orders-->>Client: 202 PENDING
+
+  MQ->>Inv: consume order.created
+  alt stock available
+    Inv->>Inv: reserve stock
+    Inv->>MQ: publish stock.reserved
+    MQ->>Orders: consume stock.reserved
+    Orders->>Orders: status → AWAITING_PAYMENT
+  else insufficient stock
+    Inv->>MQ: publish stock.rejected
+    MQ->>Orders: consume stock.rejected
+    Orders->>Orders: status → CANCELLED
+  end
+
+  Client->>GW: GET /api/orders/:id
+  GW->>Orders: GET /api/orders/:id
+  Orders-->>Client: AWAITING_PAYMENT or CANCELLED
+```
+
+1. Checkout via gateway → `orders` lê carrinho via HTTP para `cart`, persiste pedido `PENDING` e publica `order.created`.
+2. `inventory` consome, reserva estoque e publica `stock.reserved` ou `stock.rejected`.
+3. `orders` consome `stock.*` e atualiza para `AWAITING_PAYMENT` ou `CANCELLED`.
+4. Cliente consulta `GET /api/orders/:id` — **sem payment ainda** (Fase 5).
+
+---
+
 ## Lacunas vs arquitetura alvo
 
 | Item | Status |
 |------|--------|
-| Microserviços (8) | `auth` + **api-gateway** + **`catalog`** + **`inventory`** + **`cart`** + **`orders`** (Step 1); demais pendentes |
-| RabbitMQ | **No compose raiz**; **`catalog` publica** eventos; **`inventory` consome** `product.created` |
-| api-gateway | **Stub Fase 3** — proxy auth + catalog + inventory + cart; JWT guard na Fase 6 |
+| Microserviços (8) | `auth` + **api-gateway** + **`catalog`** + **`inventory`** + **`cart`** + **`orders`**; `payment` + `notifications` pendentes |
+| RabbitMQ | **No compose raiz**; **`catalog` publica** eventos; **`inventory` consome** `product.created` e **`order.created`**; **`orders` publica/consome** saga parcial |
+| api-gateway | **Stub Fase 4** — proxy auth + catalog + inventory + cart + orders; JWT guard na Fase 6 |
 | Monorepo `services/` + `packages/` | **Feito** |
 | Hash de senha (bcrypt) | **Feito** |
 | JWT com expiry | **Feito** (`24h` default) |
 | Validação de input | **Feito** |
-| Compose raiz | **Feito** (RabbitMQ + 4 DBs + auth + catalog + inventory + cart + api-gateway) |
+| Compose raiz | **Feito** (RabbitMQ + 5 DBs + auth + catalog + inventory + cart + orders + api-gateway) |
 | Eventos / consumers | **`catalog` publica** `product.created` / `product.updated`; **`inventory` consome** `product.created` e **`order.created`** (publica `stock.reserved` / `stock.rejected`); **`orders` publica** `order.created` e **consome** `stock.*` |
 
 ---
@@ -213,4 +255,4 @@ sequenceDiagram
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 4 Step 3:** compose raiz + gateway proxy para `orders`.
+Seguir [roadmap.md](./roadmap.md) — **Fase 5:** `payment` mock + fechar saga (`payment.succeeded` / `payment.failed`, `order.confirmed` / `order.cancelled`).
