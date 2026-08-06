@@ -253,6 +253,21 @@ sequenceDiagram
 
 ---
 
+## Cobertura de testes (auditoria pós–Fase 4)
+
+| Área | Veredito |
+|------|----------|
+| Unitários `auth` / `orders` / `inventory` | Adequado (~44 testes passando nos 5 serviços) |
+| Unitários `catalog` / `cart` | Fino (faltam PATCH cart, alguns GETs/validações) |
+| `@ecommerce/auth-middleware` | Testes existem, runner quebrado (deps) |
+| `@ecommerce/messaging` | **Sem testes** |
+| `api-gateway` | **Sem testes** |
+| Contratos de evento / E2E compose / CI | **Ausentes** |
+
+Conclusão: suficiente para continuar Fases 5–6; fechar gaps na **Fase 7 — Test coverage** (ver roadmap).
+
+---
+
 ## Próximo passo
 
 Seguir [roadmap.md](./roadmap.md) — **Fase 5:** `payment` mock + fechar saga (`payment.succeeded` / `payment.failed`, `order.confirmed` / `order.cancelled`).

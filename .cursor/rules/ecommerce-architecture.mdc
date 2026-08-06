@@ -44,4 +44,5 @@ Código em `services/auth/`, `services/api-gateway/`, `services/catalog/`, `serv
 2. Novos eventos: documente routing key, publisher, payload e consumers em `docs/architecture.md`.
 3. Não compartilhe banco entre serviços.
 4. Não encadeie HTTP longo no checkout — use a saga por eventos.
-5. Consumers devem tender a ser **idempotentes** (obrigatório na fase Polish).
+5. Consumers devem tender a ser **idempotentes** (obrigatório na Fase 8 — Polish).
+6. Após o fluxo de negócio (Fases 5–6), a **Fase 7 — Test coverage** fecha gaps: messaging, gateway, contratos de evento, E2E e CI. Não trate unitários mockados como prova do saga ponta a ponta.
