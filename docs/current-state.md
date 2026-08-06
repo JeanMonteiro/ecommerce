@@ -128,14 +128,19 @@ ecommerce/
 - **Gateway:** proxy `/api/orders` — **pendente**
 - **Próximo passo Fase 4:** `inventory` consome `order.created` e reserva estoque
 
-### inventory (Fase 2 — concluído)
+- **Próximo passo Fase 4:** compose + gateway para `orders` (Step 3)
+
+### inventory (Fase 2 + Fase 4 Step 2)
 
 - Express + TypeScript + Prisma + PostgreSQL
 - Endpoints: `GET /api/inventory`, `GET /api/inventory/:productId`, `PATCH /api/inventory/:productId`
 - Consome `product.created` via `@ecommerce/messaging` (queue `inventory.product-created`) — cria stock com quantity **0** (idempotente)
+- Consome `order.created` (queue `inventory.order-created`) — reserva estoque em transação; publica `stock.reserved` ou `stock.rejected` (idempotente por `orderId`)
+- Modelos Prisma: `Stock`, `Reservation`, `ReservationItem` (`quantity` em Stock = disponível; reserva decrementa)
 - Porta **3005** local (`INVENTORY_PORT`); **3000** no container Docker
 - Testes Jest + Supertest com Prisma e messaging mockados
 - **Compose raiz:** `inventory-db` + `inventory` com `DATABASE_URL` e `RABBITMQ_URL`
+- **TODO Fase 5:** release/commit reserva em `order.cancelled` / `payment.failed` / `order.confirmed`
 
 ---
 
@@ -188,7 +193,7 @@ sequenceDiagram
 | JWT com expiry | **Feito** (`24h` default) |
 | Validação de input | **Feito** |
 | Compose raiz | **Feito** (RabbitMQ + 4 DBs + auth + catalog + inventory + cart + api-gateway) |
-| Eventos / consumers | **`catalog` publica** `product.created` / `product.updated`; **`inventory` consome** `product.created`; **`orders` publica** `order.created` e **consome** `stock.*` |
+| Eventos / consumers | **`catalog` publica** `product.created` / `product.updated`; **`inventory` consome** `product.created` e **`order.created`** (publica `stock.reserved` / `stock.rejected`); **`orders` publica** `order.created` e **consome** `stock.*` |
 
 ---
 
@@ -208,4 +213,4 @@ sequenceDiagram
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 4 Step 2:** `inventory` consome `order.created` e publica `stock.reserved` / `stock.rejected`; depois compose + gateway para `orders`.
+Seguir [roadmap.md](./roadmap.md) — **Fase 4 Step 3:** compose raiz + gateway proxy para `orders`.
