@@ -135,7 +135,7 @@ Regra: efeitos em outro domínio **depois** de aceitar o pedido → **fila**, n�
 | `product.created` | catalog | `{ productId, name, price }` | inventory (cria stock=0) |
 | `product.updated` | catalog | `{ productId, price? }` | — (futuro) |
 | `order.created` | orders | `{ orderId, userId, items[] }` | inventory |
-| `stock.reserved` | inventory | `{ orderId, reservationId }` | payment |
+| `stock.reserved` | inventory | `{ orderId, reservationId }` | orders, payment |
 | `stock.rejected` | inventory | `{ orderId, reason }` | orders |
 | `payment.succeeded` | payment | `{ orderId, paymentId }` | orders |
 | `payment.failed` | payment | `{ orderId, reason }` | orders, inventory (libera reserva) |

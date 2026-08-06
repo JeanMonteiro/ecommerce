@@ -38,7 +38,11 @@ ecommerce/
 │   │   ├── app.ts
 │   │   ├── prisma/
 │   │   └── ...
-│   └── cart/                # microserviço de carrinho (Fase 3)
+│   ├── cart/                # microserviço de carrinho (Fase 3)
+│   │   ├── app.ts
+│   │   ├── prisma/
+│   │   └── ...
+│   └── orders/              # microserviço de pedidos (Fase 4 — em progresso)
 │       ├── app.ts
 │       ├── prisma/
 │       └── ...
@@ -111,6 +115,19 @@ ecommerce/
 - **Gateway:** proxy `/api/cart`
 - **TODO Fase 5:** consumer `order.confirmed` → limpar carrinho
 
+### orders (Fase 4 — em progresso, Step 1)
+
+- Express + TypeScript + Prisma + PostgreSQL
+- Endpoints (JWT via `@ecommerce/auth-middleware`): `POST /api/orders` (202 PENDING), `GET /api/orders`, `GET /api/orders/:id`
+- HTTP interno para `cart`: `GET /api/cart` via `CART_SERVICE_URL` — **repassa o JWT** do usuário
+- Publica `order.created` no checkout (via `@ecommerce/messaging`)
+- Consome `stock.reserved` / `stock.rejected` (queue `orders.stock-events`, pattern `stock.*`) → atualiza status (`AWAITING_PAYMENT` / `CANCELLED`)
+- Porta **3004** local (`ORDERS_PORT`); **3000** no container Docker
+- Testes Jest + Supertest com Prisma, messaging e cart client mockados
+- **Compose raiz:** `orders-db` + `orders` — **pendente** (próximo passo da Fase 4)
+- **Gateway:** proxy `/api/orders` — **pendente**
+- **Próximo passo Fase 4:** `inventory` consome `order.created` e reserva estoque
+
 ### inventory (Fase 2 — concluído)
 
 - Express + TypeScript + Prisma + PostgreSQL
@@ -163,7 +180,7 @@ sequenceDiagram
 
 | Item | Status |
 |------|--------|
-| Microserviços (8) | `auth` + **api-gateway** + **`catalog`** + **`inventory`** + **`cart`**; demais pendentes |
+| Microserviços (8) | `auth` + **api-gateway** + **`catalog`** + **`inventory`** + **`cart`** + **`orders`** (Step 1); demais pendentes |
 | RabbitMQ | **No compose raiz**; **`catalog` publica** eventos; **`inventory` consome** `product.created` |
 | api-gateway | **Stub Fase 3** — proxy auth + catalog + inventory + cart; JWT guard na Fase 6 |
 | Monorepo `services/` + `packages/` | **Feito** |
@@ -171,7 +188,7 @@ sequenceDiagram
 | JWT com expiry | **Feito** (`24h` default) |
 | Validação de input | **Feito** |
 | Compose raiz | **Feito** (RabbitMQ + 4 DBs + auth + catalog + inventory + cart + api-gateway) |
-| Eventos / consumers | **`catalog` publica** `product.created` / `product.updated`; **`inventory` consome** `product.created` |
+| Eventos / consumers | **`catalog` publica** `product.created` / `product.updated`; **`inventory` consome** `product.created`; **`orders` publica** `order.created` e **consome** `stock.*` |
 
 ---
 
@@ -191,4 +208,4 @@ sequenceDiagram
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 4:** `orders` + saga parcial (`order.created` → reserva de estoque).
+Seguir [roadmap.md](./roadmap.md) — **Fase 4 Step 2:** `inventory` consome `order.created` e publica `stock.reserved` / `stock.rejected`; depois compose + gateway para `orders`.

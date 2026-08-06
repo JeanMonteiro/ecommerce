@@ -1,0 +1,43 @@
+{
+  "name": "orders",
+  "version": "1.0.0",
+  "description": "orders microservice for the ecommerce project",
+  "main": "index.js",
+  "scripts": {
+    "start": "node dist/app.js",
+    "dev": "ts-node ./app.ts",
+    "build": "tsc",
+    "test": "jest"
+  },
+  "keywords": [
+    "microservice",
+    "nodejs",
+    "ecommerce",
+    "orders"
+  ],
+  "author": "jean_monteiro",
+  "license": "ISC",
+  "dependencies": {
+    "@ecommerce/auth-middleware": "file:../../packages/auth-middleware",
+    "@ecommerce/messaging": "file:../../packages/messaging",
+    "@prisma/client": "^5.7.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.11",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.10.8",
+    "@types/supertest": "^6.0.2",
+    "jest": "^29.7.0",
+    "jest-mock-extended": "^3.0.5",
+    "prisma": "^5.7.1",
+    "supertest": "^6.3.3",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.3.3"
+  }
+}

@@ -93,7 +93,7 @@ Ordem pensada para aprender uma peça por vez, sem subir 8 serviços vazios de u
 | 1. Foundation | **Concluída (foundation)** — monorepo, auth hardening, `@ecommerce/auth-middleware`, compose raiz, **api-gateway stub** (proxy auth). Polish fino pode continuar na Fase 7. |
 | 2. Catalog + Inventory | **Concluída** — `@ecommerce/messaging`, `catalog` (CRUD + eventos), `inventory` (consumer + HTTP), compose raiz (`catalog-db`, `inventory-db`, RabbitMQ) e gateway proxy `/api/products` + `/api/inventory` |
 | 3. Cart | **Concluída** — `services/cart` (add/remove/list + HTTP catalog), compose raiz (`cart-db`, `cart`) e gateway proxy `/api/cart` |
-| 4. Orders + saga parcial | Pendente |
+| 4. Orders + saga parcial | **Em progresso** — `orders` Step 1 (criar pedido, `order.created`, consumers `stock.*`); falta reserva no `inventory` + compose/gateway |
 | 5. Payment + fechar saga | Pendente |
 | 6. Notifications + Gateway | Pendente |
 | 7. Polish | Pendente |
