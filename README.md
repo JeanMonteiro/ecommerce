@@ -15,9 +15,9 @@ Leia a arquitetura antes de adicionar serviços, rotas ou eventos.
 
 ## Estado rápido
 
-- Implementado: `services/auth/`, `services/catalog/`, `services/inventory/`, `services/cart/`, `services/orders/`, `services/api-gateway/` (proxy auth + catalog + inventory + cart + orders)
+- Implementado: `services/auth/`, `services/catalog/`, `services/inventory/`, `services/cart/`, `services/orders/`, `services/payment/`, `services/api-gateway/` (proxy auth + catalog + inventory + cart + orders — **sem** proxy payment)
 - Libs compartilhadas: `packages/auth-middleware/`, `packages/messaging/`
-- Compose raiz: RabbitMQ + auth-db + catalog-db + inventory-db + cart-db + orders-db + auth + catalog + inventory + cart + orders + api-gateway
+- Compose raiz: RabbitMQ + 6 DBs + auth + catalog + inventory + cart + orders + payment + api-gateway
 - Alvo: 8 serviços + libs + RabbitMQ — ver docs
 
 ## Stack alvo
@@ -26,7 +26,7 @@ Leia a arquitetura antes de adicionar serviços, rotas ou eventos.
 - RabbitMQ (`ecommerce.events`, topic)
 - API Gateway na porta 3000
 
-## Subir o stack local (Fase 4)
+## Subir o stack local (Fase 5)
 
 Na raiz do repositório:
 
@@ -44,12 +44,14 @@ docker compose up --build
 | cart (direto) | http://localhost:3003 |
 | orders (direto) | http://localhost:3004 |
 | inventory (direto) | http://localhost:3005 |
+| payment (direto, interno) | http://localhost:3006 — `GET /health` apenas |
 | RabbitMQ management | http://localhost:15672 (guest/guest por padrão) |
 | auth-db (host) | localhost:5433 |
 | catalog-db (host) | localhost:5434 |
 | inventory-db (host) | localhost:5435 |
 | cart-db (host) | localhost:5436 |
 | orders-db (host) | localhost:5437 |
+| payment-db (host) | localhost:5438 |
 
 Endpoints via gateway (`:3000`):
 
@@ -73,12 +75,15 @@ Health do gateway: `GET http://localhost:3000/health`
 2. `POST http://localhost:3000/api/cart` com `{ "productId": "...", "quantity": 1 }` — cart valida produto/preço via HTTP interno para catalog
 3. `GET http://localhost:3000/api/cart` — listar itens do carrinho
 
-### Fluxo Fase 4 (checkout + saga parcial)
+### Fluxo Fase 4–5 (checkout + saga completa)
 
 1. Adicionar itens ao carrinho (Fase 3) e ajustar estoque (`PATCH /api/inventory/:productId`)
 2. `POST http://localhost:3000/api/orders` com Bearer JWT — retorna **202** com `status: PENDING`
-3. `inventory` reserva estoque assincronamente; `orders` atualiza para `AWAITING_PAYMENT` ou `CANCELLED`
-4. `GET http://localhost:3000/api/orders/:id` — consultar status final da saga parcial
+3. Saga assíncrona: reserva estoque → pagamento mock (`PAYMENT_FORCE_RESULT=success` por padrão) → `CONFIRMED` ou `CANCELLED`
+4. Em sucesso: inventory commit + cart limpo via `order.confirmed`; em falha: inventory release via `order.cancelled`
+5. `GET http://localhost:3000/api/orders/:id` — poll até `CONFIRMED` ou `CANCELLED`
+
+Opcional: `PAYMENT_FORCE_RESULT=failure` no `.env` para simular falha de pagamento e compensação.
 
 ## Desenvolvimento local (sem Docker para o gateway)
 
@@ -97,4 +102,4 @@ yarn dev
 
 ## Próximo passo
 
-Fase 5 do [roadmap](./docs/roadmap.md): **Payment** mock + fechar saga (`payment.succeeded` / `payment.failed`, limpar carrinho em `order.confirmed`).
+Fase 6 do [roadmap](./docs/roadmap.md): **Notifications** (mock email/log) + JWT guard no gateway.

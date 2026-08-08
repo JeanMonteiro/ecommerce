@@ -270,20 +270,25 @@ Cada serviço: Express + Prisma + Postgres próprio + publisher/consumer RabbitM
 
 Arquivo **`docker-compose.yml`** na raiz do monorepo.
 
-**Fase 1 (implementado):** `rabbitmq`, `auth-db`, `auth`.  
-**Próximas fases:** demais DBs e serviços conforme o roadmap.
+**Fase 1–5 (implementado):** `rabbitmq`, 6 DBs (`auth-db` … `payment-db`), `auth`, `catalog`, `inventory`, `cart`, `orders`, `payment`, `api-gateway`.
 
 | Serviço | Imagem / build | Portas (host) |
 |---------|----------------|---------------|
 | rabbitmq | `rabbitmq:3-management` | 5672 (AMQP), 15672 (UI) |
-| auth-db | `postgres:13` | 5433 → 5432 (default no `.env.example`) |
-| auth | build `services/auth/Dockerfile` (contexto = raiz do repo) | 3001 → 3000 |
+| auth-db … payment-db | `postgres:13` | 5433–5438 → 5432 (defaults no `.env.example`) |
+| auth | build `services/auth/Dockerfile` | 3001 → 3000 |
+| catalog | build `services/catalog/Dockerfile` | 3002 → 3000 |
+| cart | build `services/cart/Dockerfile` | 3003 → 3000 |
+| orders | build `services/orders/Dockerfile` | 3004 → 3000 |
+| inventory | build `services/inventory/Dockerfile` | 3005 → 3000 |
+| payment | build `services/payment/Dockerfile` | 3006 → 3000 (interno; sem proxy no gateway) |
+| api-gateway | build `services/api-gateway/Dockerfile` | 3000 → 3000 |
 
 Onboarding: `cp .env.example .env`, editar `JWT_HASH`, depois `docker compose up --build`.
 
-O build do `auth` usa contexto na **raiz** do monorepo porque depende de `packages/auth-middleware` (`file:../../...`). Auth ainda **não publica** eventos no RabbitMQ — o broker sobe no stack para as fases seguintes.
+O build de serviços que dependem de packages usa contexto na **raiz** do monorepo (`file:../../packages/...`). `payment` e `cart` consomem RabbitMQ; `payment` usa `PAYMENT_FORCE_RESULT` (`success` \| `failure` \| `random`).
 
-Esqueleto alvo (serviços futuros):
+Esqueleto alvo (serviço futuro):
 
 ```yaml
 services:

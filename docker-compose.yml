@@ -119,6 +119,27 @@ services:
       timeout: 5s
       retries: 5
 
+  payment-db:
+    image: postgres:13
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PAYMENT_DB_NAME:-ecommerce_payment_database}
+      POSTGRES_USER: ${PAYMENT_DB_USER:-ecommerce_payment_user}
+      POSTGRES_PASSWORD: ${PAYMENT_DB_PASSWORD:-ecommerce_payment_pass}
+    ports:
+      - "${PAYMENT_DB_PORT:-5438}:5432"
+    volumes:
+      - payment-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${PAYMENT_DB_USER:-ecommerce_payment_user} -d ${PAYMENT_DB_NAME:-ecommerce_payment_database}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   auth:
     build:
       # Repo root context: auth depends on packages/auth-middleware (file:../../...)
@@ -189,12 +210,15 @@ services:
       JWT_HASH: ${JWT_HASH:?JWT_HASH is required — copy .env.example to .env}
       DATABASE_URL: postgresql://${CART_DB_USER:-ecommerce_cart_user}:${CART_DB_PASSWORD:-ecommerce_cart_pass}@cart-db:5432/${CART_DB_NAME:-ecommerce_cart_database}?schema=public
       CATALOG_SERVICE_URL: http://catalog:3000
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
     ports:
       - "${CART_PORT:-3003}:3000"
     depends_on:
       cart-db:
         condition: service_healthy
       catalog:
+        condition: service_started
+      rabbitmq:
         condition: service_started
 
   orders:
@@ -218,6 +242,25 @@ services:
         condition: service_healthy
       cart:
         condition: service_started
+      rabbitmq:
+        condition: service_started
+
+  payment:
+    build:
+      # Repo root context: payment depends on packages/messaging (file:../../...)
+      context: .
+      dockerfile: services/payment/Dockerfile
+    restart: unless-stopped
+    environment:
+      PAYMENT_PORT: "3000"
+      DATABASE_URL: postgresql://${PAYMENT_DB_USER:-ecommerce_payment_user}:${PAYMENT_DB_PASSWORD:-ecommerce_payment_pass}@payment-db:5432/${PAYMENT_DB_NAME:-ecommerce_payment_database}?schema=public
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
+      PAYMENT_FORCE_RESULT: ${PAYMENT_FORCE_RESULT:-success}
+    ports:
+      - "${PAYMENT_PORT:-3006}:3000"
+    depends_on:
+      payment-db:
+        condition: service_healthy
       rabbitmq:
         condition: service_started
 
@@ -248,3 +291,4 @@ volumes:
   inventory-db-data:
   cart-db-data:
   orders-db-data:
+  payment-db-data:
