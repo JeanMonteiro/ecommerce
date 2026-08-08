@@ -1,0 +1,7 @@
+{
+  "name": "ecommerce",
+  "private": true,
+  "scripts": {
+    "test": "node scripts/run-all-tests.js"
+  }
+}

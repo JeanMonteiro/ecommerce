@@ -53,6 +53,11 @@ ecommerce/
 │   └── notifications/       # mock email via eventos (Fase 6 — concluído)
 │       ├── app.ts
 │       └── ...
+├── package.json             # runner raiz: yarn test → scripts/run-all-tests.js
+├── scripts/
+│   └── run-all-tests.js     # instala + jest em todos os packages/services
+├── .github/workflows/
+│   └── test.yml             # CI: yarn test no push/PR (Node 18)
 ├── packages/
 │   ├── auth-middleware/     # lib JWT compartilhada (@ecommerce/auth-middleware)
 │   ├── event-contracts/     # validators + fixtures de eventos (@ecommerce/event-contracts)
@@ -331,7 +336,7 @@ sequenceDiagram
 | `@ecommerce/messaging` | **OK** — 8 testes com amqplib mockado (Fase 7 Step 1) |
 | `@ecommerce/event-contracts` | **OK** — 19 testes, fixtures + validators (Fase 7 Step 2) |
 | `api-gateway` | Smoke tests (`/health`, proxy, JWT guard) |
-| Contratos de evento / E2E compose / CI | Contratos **OK**; E2E e CI **ausentes** |
+| Contratos de evento / E2E compose / CI | Contratos **OK**; CI **OK** (Step 3 — `yarn test` raiz + `.github/workflows/test.yml`); E2E compose **ausente** (Step 4) |
 
 Conclusão: suficiente para continuar Fases 5–6; fechar gaps na **Fase 7 — Test coverage** (ver roadmap).
 
@@ -339,4 +344,4 @@ Conclusão: suficiente para continuar Fases 5–6; fechar gaps na **Fase 7 — T
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 7 — Test coverage (em progresso):** Step 2 concluído (gaps unitários + `@ecommerce/event-contracts`); próximo: E2E compose e CI.
+Seguir [roadmap.md](./roadmap.md) — **Fase 7 — Test coverage (em progresso):** Step 3 concluído (runner raiz + CI); próximo: E2E compose (Step 4).

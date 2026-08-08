@@ -16,9 +16,9 @@ Leia a arquitetura antes de adicionar serviços, rotas ou eventos.
 ## Estado rápido
 
 - Implementado: **8 serviços** — `auth`, `catalog`, `inventory`, `cart`, `orders`, `payment`, `notifications`, `api-gateway` (proxy unificado + JWT guard; payment interno, sem proxy)
-- Libs compartilhadas: `packages/auth-middleware/`, `packages/messaging/`
+- Libs compartilhadas: `packages/auth-middleware/`, `packages/messaging/`, `packages/event-contracts/`
 - Compose raiz: RabbitMQ + 6 DBs + 8 serviços (Fases 1–6 concluídas)
-- Próximo: Fase 7 — Test coverage (ver [roadmap](./docs/roadmap.md))
+- Testes: `yarn test` na raiz (CI no GitHub Actions); E2E compose pendente (Fase 7 Step 4)
 
 ## Stack alvo
 
@@ -93,6 +93,25 @@ Opcional: `PAYMENT_FORCE_RESULT=failure` no `.env` para simular falha de pagamen
 2. Após checkout confirmado/cancelado (Fase 4–5) → notifications consome `order.confirmed` / `order.cancelled`
 3. `GET http://localhost:3000/api/notifications` — debug: lista emails mock em memória
 
+## Testes (Fase 7)
+
+Na raiz do repositório, rode todos os testes unitários dos pacotes e serviços:
+
+```bash
+yarn test
+```
+
+O script `scripts/run-all-tests.js` percorre, em ordem:
+
+- `packages/auth-middleware`, `packages/messaging`, `packages/event-contracts`
+- `services/auth`, `catalog`, `cart`, `orders`, `inventory`, `payment`, `notifications`, `api-gateway`
+
+Em cada diretório: `yarn install` (com `--frozen-lockfile` quando há `yarn.lock`) e `yarn test --watchman=false --ci`. Falha se qualquer alvo falhar.
+
+CI: workflow `.github/workflows/test.yml` executa `yarn test` em push/PR para `main`/`master` (Node 18).
+
+Para testar um serviço isolado: `cd services/<nome> && yarn install && yarn test`.
+
 ## Desenvolvimento local (sem Docker para o gateway)
 
 Com os serviços já rodando (ex.: `docker compose up` ou cada serviço na porta local):
@@ -111,4 +130,4 @@ yarn dev
 
 ## Próximo passo
 
-Fase 7 do [roadmap](./docs/roadmap.md): **Test coverage** — messaging, gateway, contratos de evento, E2E compose e CI.
+Fase 7 do [roadmap](./docs/roadmap.md): **Test coverage** — E2E compose (Step 4); CI e runner raiz concluídos (Step 3).
