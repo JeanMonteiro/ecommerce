@@ -4,6 +4,14 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 
+# Shared package (@ecommerce/messaging)
+COPY packages/messaging/package.json packages/messaging/yarn.lock packages/messaging/
+WORKDIR /app/packages/messaging
+RUN yarn install --frozen-lockfile
+COPY packages/messaging/tsconfig.json packages/messaging/jest.config.js packages/messaging/
+COPY packages/messaging/src packages/messaging/src
+RUN yarn build
+
 # Shared package (@ecommerce/auth-middleware)
 COPY packages/auth-middleware/package.json packages/auth-middleware/yarn.lock packages/auth-middleware/
 WORKDIR /app/packages/auth-middleware

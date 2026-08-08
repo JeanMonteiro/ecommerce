@@ -74,7 +74,7 @@ flowchart TB
 | **catalog** | 3002 | catalog_db | CRUD produtos | — |
 | **cart** | 3003 | cart_db | add/remove/list | `order.confirmed` → limpa |
 | **orders** | 3004 | orders_db | criar/listar pedido | `stock.*`, `payment.*` |
-| **inventory** | 3005 | inventory_db | consultar estoque | `order.created`, `order.cancelled`, `payment.failed`, `order.confirmed` |
+| **inventory** | 3005 | inventory_db | consultar estoque | `order.created`, `order.confirmed`, `order.cancelled` |
 | **payment** | 3006 | payment_db | — (interno) | `stock.reserved` |
 | **notifications** | 3007 | — | — | `order.confirmed`, `order.cancelled`, `user.registered` |
 
@@ -138,9 +138,9 @@ Regra: efeitos em outro domínio **depois** de aceitar o pedido → **fila**, n�
 | `stock.reserved` | inventory | `{ orderId, reservationId }` | orders, payment |
 | `stock.rejected` | inventory | `{ orderId, reason }` | orders |
 | `payment.succeeded` | payment | `{ orderId, paymentId }` | orders |
-| `payment.failed` | payment | `{ orderId, reason }` | orders, inventory (libera reserva) |
+| `payment.failed` | payment | `{ orderId, reason }` | orders |
 | `order.confirmed` | orders | `{ orderId, userId }` | cart, notifications, inventory (commit reserva) |
-| `order.cancelled` | orders | `{ orderId, reason }` | notifications, inventory (libera reserva) |
+| `order.cancelled` | orders | `{ orderId, userId?, reason }` | notifications, inventory (libera reserva) |
 
 ### Mapa producers → eventos
 

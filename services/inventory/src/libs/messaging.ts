@@ -3,10 +3,14 @@ import {
   type MessagingClient,
 } from '@ecommerce/messaging';
 import { handleOrderCreated } from '../handlers/orderCreated';
+import { handleOrderConfirmed } from '../handlers/orderConfirmed';
+import { handleOrderCancelled } from '../handlers/orderCancelled';
 import { handleProductCreated } from '../handlers/productCreated';
 
 const PRODUCT_CREATED_QUEUE = 'inventory.product-created';
 const ORDER_CREATED_QUEUE = 'inventory.order-created';
+const ORDER_CONFIRMED_QUEUE = 'inventory.order-confirmed';
+const ORDER_CANCELLED_QUEUE = 'inventory.order-cancelled';
 
 let client: MessagingClient | null = null;
 
@@ -28,6 +32,20 @@ export async function initMessaging(): Promise<MessagingClient> {
       ORDER_CREATED_QUEUE,
       async (payload) => {
         await handleOrderCreated(payload, { publish });
+      },
+    );
+    await client.subscribe(
+      'order.confirmed',
+      ORDER_CONFIRMED_QUEUE,
+      async (payload) => {
+        await handleOrderConfirmed(payload);
+      },
+    );
+    await client.subscribe(
+      'order.cancelled',
+      ORDER_CANCELLED_QUEUE,
+      async (payload) => {
+        await handleOrderCancelled(payload);
       },
     );
   }

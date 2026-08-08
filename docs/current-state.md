@@ -109,16 +109,16 @@ ecommerce/
 - Testes Jest + Supertest com Prisma e publish mockados
 - **Compose raiz:** `catalog-db` + `catalog` com `DATABASE_URL` e `RABBITMQ_URL`
 
-### cart (Fase 3 — concluído)
+### cart (Fase 3 + Fase 5 Step 3)
 
 - Express + TypeScript + Prisma + PostgreSQL
 - Endpoints (JWT obrigatório via `@ecommerce/auth-middleware`): `GET /api/cart`, `POST /api/cart`, `PATCH /api/cart/:productId`, `DELETE /api/cart/:productId`, `DELETE /api/cart`
 - HTTP interno para `catalog`: `GET /api/products/:id` via `CATALOG_SERVICE_URL` (valida produto + snapshot de preço/nome)
+- Consome `order.confirmed` (queue `cart.order-confirmed`) via `@ecommerce/messaging` — limpa carrinho do `userId` (idempotente)
 - Porta **3003** local (`CART_PORT`); **3000** no container Docker
-- Testes Jest + Supertest com Prisma e catalog client mockados
-- **Compose raiz:** `cart-db` + `cart` com `DATABASE_URL`, `JWT_HASH` e `CATALOG_SERVICE_URL`
+- Testes Jest + Supertest com Prisma, catalog client e messaging mockados
+- **Compose raiz:** `cart-db` + `cart` com `DATABASE_URL`, `JWT_HASH` e `CATALOG_SERVICE_URL` (falta `RABBITMQ_URL` — Step 4)
 - **Gateway:** proxy `/api/cart`
-- **TODO Fase 5:** consumer `order.confirmed` → limpar carrinho
 
 ### orders (Fase 4 + Fase 5 Step 2)
 
@@ -132,19 +132,19 @@ ecommerce/
 - Testes Jest + Supertest com Prisma, messaging e cart client mockados
 - **Compose raiz:** `orders-db` + `orders` com `DATABASE_URL`, `JWT_HASH`, `CART_SERVICE_URL` e `RABBITMQ_URL`
 - **Gateway:** proxy `/api/orders`
-- **Próximo passo Fase 5:** inventory release em `order.cancelled` / `payment.failed` + cart clear em `order.confirmed`
 
-### inventory (Fase 2 + Fase 4 Step 2)
+### inventory (Fase 2 + Fase 4 Step 2 + Fase 5 Step 3)
 
 - Express + TypeScript + Prisma + PostgreSQL
 - Endpoints: `GET /api/inventory`, `GET /api/inventory/:productId`, `PATCH /api/inventory/:productId`
 - Consome `product.created` via `@ecommerce/messaging` (queue `inventory.product-created`) — cria stock com quantity **0** (idempotente)
 - Consome `order.created` (queue `inventory.order-created`) — reserva estoque em transação; publica `stock.reserved` ou `stock.rejected` (idempotente por `orderId`)
+- Consome `order.confirmed` (queue `inventory.order-confirmed`) — commit reserva (`RESERVED` → `COMMITTED`; idempotente)
+- Consome `order.cancelled` (queue `inventory.order-cancelled`) — release reserva (restaura stock, `RESERVED` → `RELEASED`; idempotente)
 - Modelos Prisma: `Stock`, `Reservation`, `ReservationItem` (`quantity` em Stock = disponível; reserva decrementa)
 - Porta **3005** local (`INVENTORY_PORT`); **3000** no container Docker
 - Testes Jest + Supertest com Prisma e messaging mockados
 - **Compose raiz:** `inventory-db` + `inventory` com `DATABASE_URL` e `RABBITMQ_URL`
-- **TODO Fase 5:** release/commit reserva em `order.cancelled` / `payment.failed` / `order.confirmed`
 
 ### payment (Fase 5 Step 1 — concluído)
 
@@ -290,4 +290,4 @@ Conclusão: suficiente para continuar Fases 5–6; fechar gaps na **Fase 7 — T
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 5 (continuação):** wiring `payment` no compose + inventory release + cart clear em `order.confirmed` / `order.cancelled`.
+Seguir [roadmap.md](./roadmap.md) — **Fase 5 Step 4:** wiring `payment` no compose raiz + `RABBITMQ_URL` no cart; compensação (inventory release + cart clear) concluída via `order.confirmed` / `order.cancelled`.

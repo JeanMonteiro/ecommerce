@@ -19,6 +19,7 @@
   "license": "ISC",
   "dependencies": {
     "@ecommerce/auth-middleware": "file:../../packages/auth-middleware",
+    "@ecommerce/messaging": "file:../../packages/messaging",
     "@prisma/client": "^5.7.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
