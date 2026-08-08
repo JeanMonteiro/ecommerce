@@ -1,6 +1,10 @@
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { PrismaClient } from '@prisma/client';
 import {
+  isOrderConfirmedPayload,
+  orderConfirmedFixture,
+} from '@ecommerce/event-contracts';
+import {
   handleOrderConfirmed,
   type OrderConfirmedPayload,
 } from '../handlers/orderConfirmed';
@@ -12,6 +16,10 @@ describe('handleOrderConfirmed', () => {
     orderId: 42,
     userId: 7,
   };
+
+  it('accepts the shared order.confirmed contract fixture', () => {
+    expect(isOrderConfirmedPayload(orderConfirmedFixture)).toBe(true);
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();

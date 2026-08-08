@@ -55,6 +55,7 @@ ecommerce/
 │       └── ...
 ├── packages/
 │   ├── auth-middleware/     # lib JWT compartilhada (@ecommerce/auth-middleware)
+│   ├── event-contracts/     # validators + fixtures de eventos (@ecommerce/event-contracts)
 │   └── messaging/           # lib RabbitMQ (@ecommerce/messaging)
 └── docs/                    # documentação de arquitetura (este diretório)
 ```
@@ -104,6 +105,15 @@ ecommerce/
 - Assert topic exchange `ecommerce.events`; `publish(routingKey, payload)` e `subscribe(pattern, queue, handler)`
 - **8 testes unitários** com `amqplib` mockado: assert exchange, publish JSON buffer, subscribe bind/ack, nack sem requeue (Fase 7 Step 1)
 - Consumido por `services/auth`, `services/catalog`, `services/inventory`, `services/cart`, `services/orders`, `services/payment` e `services/notifications`
+
+### event-contracts (Fase 7 Step 2)
+
+- Pacote `@ecommerce/event-contracts` — validators TypeScript + fixtures JSON para payloads de eventos
+- Eventos: `user.registered`, `product.created`, `product.updated`, `order.created`, `stock.reserved`, `stock.rejected`, `payment.succeeded`, `payment.failed`, `order.confirmed`, `order.cancelled`
+- Exporta `is*Payload` (boolean), `parse*Payload` (`{ success, data | error }`) e fixtures nomeados (ex.: `orderConfirmedFixture`)
+- **19 testes unitários** — fixtures válidos passam; payloads inválidos falham (Fase 7 Step 2)
+- Exemplo de uso: `services/cart` importa `isOrderConfirmedPayload` no teste do handler `order.confirmed`
+- Ainda **não** wired em todos os serviços (opcional nas próximas fases)
 
 ### catalog (Fase 2 — concluído)
 
@@ -316,11 +326,12 @@ sequenceDiagram
 | Área | Veredito |
 |------|----------|
 | Unitários `auth` / `orders` / `inventory` | Adequado (~44 testes passando nos 5 serviços) |
-| Unitários `catalog` / `cart` | Fino (faltam PATCH cart, alguns GETs/validações) |
+| Unitários `catalog` / `cart` | **Melhorado (Step 2)** — PATCH cart, GET-by-id, validação de preço |
 | `@ecommerce/auth-middleware` | **OK** — 4 testes, runner corrigido (Fase 7 Step 1) |
 | `@ecommerce/messaging` | **OK** — 8 testes com amqplib mockado (Fase 7 Step 1) |
-| `api-gateway` | **Sem testes** |
-| Contratos de evento / E2E compose / CI | **Ausentes** |
+| `@ecommerce/event-contracts` | **OK** — 19 testes, fixtures + validators (Fase 7 Step 2) |
+| `api-gateway` | Smoke tests (`/health`, proxy, JWT guard) |
+| Contratos de evento / E2E compose / CI | Contratos **OK**; E2E e CI **ausentes** |
 
 Conclusão: suficiente para continuar Fases 5–6; fechar gaps na **Fase 7 — Test coverage** (ver roadmap).
 
@@ -328,4 +339,4 @@ Conclusão: suficiente para continuar Fases 5–6; fechar gaps na **Fase 7 — T
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 7 — Test coverage (em progresso):** Step 1 concluído (pacotes compartilhados); próximo: gateway smoke tests, gaps unitários finos, contratos, E2E compose e CI.
+Seguir [roadmap.md](./roadmap.md) — **Fase 7 — Test coverage (em progresso):** Step 2 concluído (gaps unitários + `@ecommerce/event-contracts`); próximo: E2E compose e CI.

@@ -54,6 +54,21 @@ describe('Catalog Service', () => {
     ]);
   });
 
+  it('should return a product by id', async () => {
+    prismaMock.product.findUnique.mockResolvedValue(testProduct);
+
+    const response = await request(server).get('/api/products/1').expect(200);
+
+    expect(response.body).toEqual({
+      id: 1,
+      name: 'Test Product',
+      price: 19.99,
+      description: 'A test product',
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z',
+    });
+  });
+
   it('should return 404 when product is missing', async () => {
     prismaMock.product.findUnique.mockResolvedValue(null);
 
@@ -63,6 +78,17 @@ describe('Catalog Service', () => {
       .expect((res) => {
         expect(res.body.message).toBe('Product not found');
       });
+  });
+
+  it('should return 400 when product id is invalid', async () => {
+    await request(server)
+      .get('/api/products/abc')
+      .expect(400)
+      .expect((res) => {
+        expect(res.body.message).toBe('Invalid product id');
+      });
+
+    expect(prismaMock.product.findUnique).not.toHaveBeenCalled();
   });
 
   it('should create a product and publish product.created', async () => {
@@ -94,6 +120,30 @@ describe('Catalog Service', () => {
       .expect(400)
       .expect((res) => {
         expect(res.body.message).toBe('Name is required');
+      });
+
+    expect(publishMock).not.toHaveBeenCalled();
+  });
+
+  it('should return 400 when price is negative on create', async () => {
+    await request(server)
+      .post('/api/products')
+      .send({ name: 'Bad Price Product', price: -5 })
+      .expect(400)
+      .expect((res) => {
+        expect(res.body.message).toBe('Price must be greater than or equal to 0');
+      });
+
+    expect(publishMock).not.toHaveBeenCalled();
+  });
+
+  it('should return 400 when price is not a number on create', async () => {
+    await request(server)
+      .post('/api/products')
+      .send({ name: 'Bad Price Product', price: 'not-a-number' })
+      .expect(400)
+      .expect((res) => {
+        expect(res.body.message).toBe('Price must be a number');
       });
 
     expect(publishMock).not.toHaveBeenCalled();

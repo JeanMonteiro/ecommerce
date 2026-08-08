@@ -1,0 +1,8 @@
+{
+  "orderId": 100,
+  "userId": 7,
+  "items": [
+    { "productId": 10, "quantity": 2 },
+    { "productId": 20, "quantity": 1 }
+  ]
+}

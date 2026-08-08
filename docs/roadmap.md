@@ -80,10 +80,10 @@ Auditoria (pós–Fase 4): unitários dos 5 serviços passam (~44), mas pacotes 
 **Entrega**
 - ~~Corrigir runners quebrados: `packages/auth-middleware` (deps/`jsonwebtoken`) e política de teste em `packages/messaging`~~ **Step 1 concluído**
 - ~~Unit tests para `@ecommerce/messaging` (publish/subscribe/ack/nack com mock do amqplib)~~ **Step 1 concluído** (8 testes)
-- Smoke tests do `api-gateway` (`/health` + proxy com upstream mockado)
-- Preencher gaps unitários finos: cart `PATCH`, catalog GET-by-id/validação de preço, auth JWT inválido/expirado
-- Contratos de evento compartilhados (fixtures/schemas) para `product.created`, `order.created`, `stock.*`, `payment.*`, `order.confirmed` / `order.cancelled`
-- Testes do `payment` + paths de compensação (sucesso/falha) e limpeza do cart
+- ~~Smoke tests do `api-gateway` (`/health` + proxy com upstream mockado)~~ **Step 2 concluído** (gateway smoke tests)
+- ~~Preencher gaps unitários finos: cart `PATCH`, catalog GET-by-id/validação de preço, auth JWT inválido/expirado~~ **Step 2 concluído**
+- ~~Contratos de evento compartilhados (fixtures/schemas) para `product.created`, `order.created`, `stock.*`, `payment.*`, `order.confirmed` / `order.cancelled`~~ **Step 2 concluído** (`@ecommerce/event-contracts`)
+- ~~Testes do `payment` + paths de compensação (sucesso/falha) e limpeza do cart~~ **já existiam** (payment 8, cart clear 3, inventory compensation 5)
 - **1 fluxo E2E** via `docker compose`: register → produto → stock → cart → checkout → poll até `CONFIRMED` ou `CANCELLED`
 - CI (GitHub Actions) rodando `yarn test` em todos os packages/services no push
 
@@ -114,7 +114,7 @@ Auditoria (pós–Fase 4): unitários dos 5 serviços passam (~44), mas pacotes 
 | 4. Orders + saga parcial | **Concluída** — `orders` (criar pedido 202 PENDING, `order.created`, consumers `stock.*`), `inventory` reserva em `order.created`, compose raiz (`orders-db`, `orders`) e gateway proxy `/api/orders` |
 | 5. Payment + fechar saga | **Concluída** — `payment` mock (`PAYMENT_FORCE_RESULT`), saga completa (`payment.succeeded` / `payment.failed` → `order.confirmed` / `order.cancelled`), compensação inventory + cart clear, compose raiz (`payment-db`, `payment`, `RABBITMQ_URL` no cart) |
 | 6. Notifications + Gateway | **Concluída** — `notifications` mock email (consumers `user.registered`, `order.confirmed`, `order.cancelled`), compose raiz (`notifications`, sem DB), gateway proxy `/api/notifications` + JWT guard via `@ecommerce/auth-middleware` |
-| 7. Test coverage | **Em progresso (Step 1 concluído)** — pacotes `@ecommerce/auth-middleware` (4 testes) e `@ecommerce/messaging` (8 testes) OK; faltam gateway, gaps unitários finos, contratos, E2E e CI |
+| 7. Test coverage | **Em progresso (Step 2 concluído)** — pacotes `@ecommerce/auth-middleware` (4), `@ecommerce/messaging` (8), `@ecommerce/event-contracts` (19); gateway smoke tests; gaps unitários finos (cart PATCH, catalog GET/price, auth JWT); payment/cart/inventory compensation já cobertos; faltam E2E e CI |
 | 8. Polish | Pendente |
 
 Atualize a coluna **Status** conforme for avançando.

@@ -152,4 +152,40 @@ describe('Authentication Service', () => {
 
     expect(response.body).toEqual([{ id: 1, username: 'testuser' }]);
   });
+
+  it('should return 401 when JWT is invalid on GET /api/users', async () => {
+    const jwt = require('jsonwebtoken').default;
+    jwt.verify.mockImplementationOnce(() => {
+      throw new Error('invalid token');
+    });
+
+    await request(server)
+      .get('/api/users')
+      .set('Authorization', 'Bearer badtoken')
+      .expect(401)
+      .expect((res) => {
+        expect(res.body.message).toBe('Invalid or expired token');
+      });
+
+    expect(prismaMock.user.findMany).not.toHaveBeenCalled();
+  });
+
+  it('should return 401 when JWT is expired on GET /api/users', async () => {
+    const jwt = require('jsonwebtoken').default;
+    const expiredError = new Error('jwt expired');
+    expiredError.name = 'TokenExpiredError';
+    jwt.verify.mockImplementationOnce(() => {
+      throw expiredError;
+    });
+
+    await request(server)
+      .get('/api/users')
+      .set('Authorization', 'Bearer expiredtoken')
+      .expect(401)
+      .expect((res) => {
+        expect(res.body.message).toBe('Invalid or expired token');
+      });
+
+    expect(prismaMock.user.findMany).not.toHaveBeenCalled();
+  });
 });
