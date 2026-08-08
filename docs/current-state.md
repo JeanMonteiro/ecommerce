@@ -46,9 +46,12 @@ ecommerce/
 │   │   ├── app.ts
 │   │   ├── prisma/
 │   │   └── ...
-│   └── payment/             # microserviço de pagamento mock (Fase 5 Step 1)
+│   ├── payment/             # microserviço de pagamento mock (Fase 5 Step 1)
+│   │   ├── app.ts
+│   │   ├── prisma/
+│   │   └── ...
+│   └── notifications/       # mock email via eventos (Fase 6 Step 1)
 │       ├── app.ts
-│       ├── prisma/
 │       └── ...
 ├── packages/
 │   ├── auth-middleware/     # lib JWT compartilhada (@ecommerce/auth-middleware)
@@ -159,6 +162,19 @@ ecommerce/
 - Testes Jest com Prisma e publish mockados (success, failure, idempotência)
 - **Compose raiz:** `payment-db` + `payment` com `DATABASE_URL`, `RABBITMQ_URL` e `PAYMENT_FORCE_RESULT`
 
+### notifications (Fase 6 Step 1 — parcial)
+
+- Express + TypeScript, **sem banco** (log/mock only)
+- Consome via `@ecommerce/messaging`:
+  - `user.registered` (queue `notifications.user-registered`) → welcome email mock
+  - `order.confirmed` (queue `notifications.order-confirmed`) → order confirmed email mock
+  - `order.cancelled` (queue `notifications.order-cancelled`) → order cancelled email mock
+- "Envio" = `console.log` JSON estruturado + lista in-memory exposta em `GET /api/notifications`
+- `GET /health`
+- Porta **3007** local (`NOTIFICATIONS_PORT`); **3000** no container Docker
+- Testes Jest com handlers mockados (`sendEmail` injetável)
+- **Ainda não no compose raiz**; **auth ainda não publica** `user.registered`; **gateway sem proxy** (próximos passos da Fase 6)
+
 ---
 
 ## Fluxo de eventos (Fase 2) e HTTP síncrono (Fase 3)
@@ -265,7 +281,7 @@ sequenceDiagram
 
 | Item | Status |
 |------|--------|
-| Microserviços (8) | `auth` + **api-gateway** + **`catalog`** + **`inventory`** + **`cart`** + **`orders`** + **`payment`**; `notifications` pendente |
+| Microserviços (8) | `auth` + **api-gateway** + **`catalog`** + **`inventory`** + **`cart`** + **`orders`** + **`payment`** + **`notifications`** (Step 1 — handlers; compose/gateway/auth publish pendentes) |
 | RabbitMQ | **No compose raiz**; saga completa via eventos (`order.created` → `stock.*` → `payment.*` → `order.confirmed` / `order.cancelled`) |
 | api-gateway | **Stub Fase 4** — proxy auth + catalog + inventory + cart + orders; JWT guard na Fase 6 |
 | Monorepo `services/` + `packages/` | **Feito** |
@@ -273,7 +289,7 @@ sequenceDiagram
 | JWT com expiry | **Feito** (`24h` default) |
 | Validação de input | **Feito** |
 | Compose raiz | **Feito** (RabbitMQ + 6 DBs + auth + catalog + inventory + cart + orders + payment + api-gateway) |
-| Eventos / consumers | **`catalog` publica** `product.created` / `product.updated`; **`inventory` consome** `product.created`, **`order.created`**, **`order.confirmed`**, **`order.cancelled`** (publica `stock.reserved` / `stock.rejected`); **`orders` publica** `order.created`, **consome** `stock.*` e **`payment.*`** (publica `order.confirmed` / `order.cancelled`); **`payment` consome** `stock.reserved` (publica `payment.succeeded` / `payment.failed`); **`cart` consome** `order.confirmed` (limpa carrinho) |
+| Eventos / consumers | **`catalog` publica** `product.created` / `product.updated`; **`inventory` consome** `product.created`, **`order.created`**, **`order.confirmed`**, **`order.cancelled`** (publica `stock.reserved` / `stock.rejected`); **`orders` publica** `order.created`, **consome** `stock.*` e **`payment.*`** (publica `order.confirmed` / `order.cancelled`); **`payment` consome** `stock.reserved` (publica `payment.succeeded` / `payment.failed`); **`cart` consome** `order.confirmed` (limpa carrinho); **`notifications` consome** `user.registered`, `order.confirmed`, `order.cancelled` (mock email — **`auth` ainda não publica** `user.registered`) |
 
 ---
 
@@ -308,4 +324,4 @@ Conclusão: suficiente para continuar Fases 5–6; fechar gaps na **Fase 7 — T
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 6 — Notifications + Gateway completo:** serviço `notifications` (mock email/log), JWT guard no gateway e rotas unificadas.
+Seguir [roadmap.md](./roadmap.md) — **Fase 6 (continuação):** wire `notifications` no compose, publicar `user.registered` no auth, JWT guard + proxy no gateway.
