@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { authMiddleware } from '@ecommerce/auth-middleware';
 import prisma from './libs/prisma';
+import { publishEvent } from './libs/messaging';
 import { signToken } from './config/jwt';
 import { validateAuthInput } from './validation/auth';
 
@@ -33,6 +34,15 @@ router.post('/api/users', async function (req: Request, res: Response) {
         password: hashedPassword,
       },
     });
+
+    try {
+      await publishEvent('user.registered', {
+        userId: newUser.id,
+        username: newUser.username,
+      });
+    } catch (publishError) {
+      console.error('Failed to publish user.registered:', publishError);
+    }
 
     const token = signToken({ userId: newUser.id, username: newUser.username });
 

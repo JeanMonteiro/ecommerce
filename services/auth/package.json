@@ -18,6 +18,7 @@
   "license": "ISC",
   "dependencies": {
     "@ecommerce/auth-middleware": "file:../../packages/auth-middleware",
+    "@ecommerce/messaging": "file:../../packages/messaging",
     "@prisma/client": "^5.7.1",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.2",

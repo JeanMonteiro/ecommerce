@@ -12,6 +12,15 @@ COPY packages/auth-middleware/tsconfig.json packages/auth-middleware/custom.d.ts
 COPY packages/auth-middleware/src packages/auth-middleware/src
 RUN yarn build
 
+# Shared package (@ecommerce/messaging)
+WORKDIR /app
+COPY packages/messaging/package.json packages/messaging/yarn.lock packages/messaging/
+WORKDIR /app/packages/messaging
+RUN yarn install --frozen-lockfile
+COPY packages/messaging/tsconfig.json packages/messaging/jest.config.js packages/messaging/
+COPY packages/messaging/src packages/messaging/src
+RUN yarn build
+
 # Auth microservice
 WORKDIR /app/services/auth
 COPY services/auth/package.json services/auth/yarn.lock ./

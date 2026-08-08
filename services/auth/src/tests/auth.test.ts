@@ -23,9 +23,24 @@ jest.mock('jsonwebtoken', () => ({
   },
 }));
 
+const publishMock = jest.fn().mockResolvedValue(undefined);
+
+jest.mock('../libs/messaging', () => ({
+  __esModule: true,
+  initMessaging: jest.fn().mockResolvedValue(undefined),
+  closeMessaging: jest.fn().mockResolvedValue(undefined),
+  getMessagingClient: jest.fn(),
+  publishEvent: (...args: unknown[]) => publishMock(...args),
+  resetMessagingClientForTests: jest.fn(),
+}));
+
 describe('Authentication Service', () => {
   afterAll((done) => {
     server.close(done);
+  });
+
+  beforeEach(() => {
+    publishMock.mockClear();
   });
 
   const testUser = {
@@ -80,6 +95,10 @@ describe('Authentication Service', () => {
         username: testUser.username,
         password: 'hashedpassword',
       },
+    });
+    expect(publishMock).toHaveBeenCalledWith('user.registered', {
+      userId: testUser.id,
+      username: testUser.username,
     });
   });
 
