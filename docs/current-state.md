@@ -65,27 +65,28 @@ ecommerce/
 
 - Express + TypeScript + Prisma + PostgreSQL
 - Endpoints: `POST /api/users`, `POST /api/auth`, `GET /api/users` (JWT obrigatório)
+- Publica `user.registered` no register (via `@ecommerce/messaging`)
 - Senhas com **bcrypt** (hash no register, compare no login)
 - JWT com **`expiresIn`** (`24h` por padrão; `JWT_EXPIRES_IN` opcional)
 - Validação de input (username trim, password mín. 6 caracteres)
 - `JWT_HASH` obrigatório no startup
 - Testes Jest + Supertest com Prisma/bcrypt mockados
 - Docker Compose legado em `services/auth/` (app + Postgres)
-- **Compose raiz** (`docker-compose.yml`): RabbitMQ + `auth-db` + `auth` — auth ainda **não publica eventos** no broker
+- **Compose raiz** (`docker-compose.yml`): RabbitMQ + `auth-db` + `auth` — auth publica `user.registered` no register
 
-### api-gateway (stub — Fase 4)
+### api-gateway (Fase 4 + Fase 6 Step 3)
 
-- Express + TypeScript + `http-proxy-middleware`
-- `GET /health` → `{ status: 'ok' }`
-- Proxy para auth (paths preservados): `POST /api/users`, `POST /api/auth`, `GET /api/users`
-- Proxy para catalog: `/api/products` (CRUD produtos)
-- Proxy para inventory: `/api/inventory` (consulta/atualização de estoque)
-- Proxy para cart: `/api/cart` (carrinho — JWT validado no serviço cart)
-- Proxy para orders: `/api/orders` (checkout — JWT validado no serviço orders)
+- Express + TypeScript + `http-proxy-middleware` + `@ecommerce/auth-middleware`
+- `GET /health` → `{ status: 'ok' }` (público)
+- **`JWT_HASH` obrigatório** no startup (mesmo secret dos demais serviços)
+- **Público (sem JWT):** `POST /api/users` (register), `POST /api/auth` (login), `GET /api/products`, `GET /api/products/:id`, `GET /api/inventory`, `GET /api/inventory/:id`, `GET /api/notifications` (debug mock emails)
+- **Protegido (JWT no gateway):** `GET /api/users`, todo `/api/cart/*`, todo `/api/orders/*`, mutações em `/api/products` e `/api/inventory` (POST/PUT/PATCH/DELETE)
+- Proxy para auth, catalog, inventory, cart, orders e notifications (`NOTIFICATIONS_SERVICE_URL`, default `localhost:3007`)
 - Porta **3000** (`GATEWAY_PORT` / `API_GATEWAY_PORT`)
-- Upstreams via env (`AUTH_SERVICE_URL`, `CATALOG_SERVICE_URL`, `INVENTORY_SERVICE_URL`, `CART_SERVICE_URL`, `ORDERS_SERVICE_URL`)
-- CORS habilitado; **sem** JWT no gateway ainda (TODO Fase 6 — `@ecommerce/auth-middleware`)
-- No compose raiz: depende de `auth`, `catalog`, `inventory`, `cart`, `orders`; expõe `:3000`
+- Upstreams via env (`AUTH_SERVICE_URL`, `CATALOG_SERVICE_URL`, `INVENTORY_SERVICE_URL`, `CART_SERVICE_URL`, `ORDERS_SERVICE_URL`, `NOTIFICATIONS_SERVICE_URL`)
+- CORS habilitado; cart/orders também validam JWT nos serviços (defense in depth)
+- Smoke tests Jest (`/health`, rotas públicas vs 401)
+- No compose raiz: depende de `auth`, `catalog`, `inventory`, `cart`, `orders`; expõe `:3000`; `JWT_HASH` injetado via `.env`
 
 ### auth-middleware
 
@@ -100,7 +101,7 @@ ecommerce/
 - Pacote `@ecommerce/messaging` — helpers RabbitMQ compartilhados
 - `createMessagingClient()` conecta via `RABBITMQ_URL` (default `amqp://guest:guest@localhost:5672`)
 - Assert topic exchange `ecommerce.events`; `publish(routingKey, payload)` e `subscribe(pattern, queue, handler)`
-- Consumido por `services/catalog`, `services/inventory`, `services/cart`, `services/orders` e `services/payment`
+- Consumido por `services/auth`, `services/catalog`, `services/inventory`, `services/cart`, `services/orders` e `services/payment`
 
 ### catalog (Fase 2 — concluído)
 
@@ -173,7 +174,7 @@ ecommerce/
 - `GET /health`
 - Porta **3007** local (`NOTIFICATIONS_PORT`); **3000** no container Docker
 - Testes Jest com handlers mockados (`sendEmail` injetável)
-- **Ainda não no compose raiz**; **auth ainda não publica** `user.registered`; **gateway sem proxy** (próximos passos da Fase 6)
+- **Ainda não no compose raiz**; **gateway sem proxy** (próximos passos da Fase 6)
 
 ---
 
@@ -281,15 +282,15 @@ sequenceDiagram
 
 | Item | Status |
 |------|--------|
-| Microserviços (8) | `auth` + **api-gateway** + **`catalog`** + **`inventory`** + **`cart`** + **`orders`** + **`payment`** + **`notifications`** (Step 1 — handlers; compose/gateway/auth publish pendentes) |
+| Microserviços (8) | `auth` + **api-gateway** + **`catalog`** + **`inventory`** + **`cart`** + **`orders`** + **`payment`** + **`notifications`** (Step 1 — handlers; compose/gateway pendentes) |
 | RabbitMQ | **No compose raiz**; saga completa via eventos (`order.created` → `stock.*` → `payment.*` → `order.confirmed` / `order.cancelled`) |
-| api-gateway | **Stub Fase 4** — proxy auth + catalog + inventory + cart + orders; JWT guard na Fase 6 |
+| api-gateway | **Fase 6 Step 3** — proxy + JWT guard (`auth-middleware`); notifications proxy (serviço ainda fora do compose) |
 | Monorepo `services/` + `packages/` | **Feito** |
 | Hash de senha (bcrypt) | **Feito** |
 | JWT com expiry | **Feito** (`24h` default) |
 | Validação de input | **Feito** |
 | Compose raiz | **Feito** (RabbitMQ + 6 DBs + auth + catalog + inventory + cart + orders + payment + api-gateway) |
-| Eventos / consumers | **`catalog` publica** `product.created` / `product.updated`; **`inventory` consome** `product.created`, **`order.created`**, **`order.confirmed`**, **`order.cancelled`** (publica `stock.reserved` / `stock.rejected`); **`orders` publica** `order.created`, **consome** `stock.*` e **`payment.*`** (publica `order.confirmed` / `order.cancelled`); **`payment` consome** `stock.reserved` (publica `payment.succeeded` / `payment.failed`); **`cart` consome** `order.confirmed` (limpa carrinho); **`notifications` consome** `user.registered`, `order.confirmed`, `order.cancelled` (mock email — **`auth` ainda não publica** `user.registered`) |
+| Eventos / consumers | **`auth` publica** `user.registered`; **`catalog` publica** `product.created` / `product.updated`; **`inventory` consome** `product.created`, **`order.created`**, **`order.confirmed`**, **`order.cancelled`** (publica `stock.reserved` / `stock.rejected`); **`orders` publica** `order.created`, **consome** `stock.*` e **`payment.*`** (publica `order.confirmed` / `order.cancelled`); **`payment` consome** `stock.reserved` (publica `payment.succeeded` / `payment.failed`); **`cart` consome** `order.confirmed` (limpa carrinho); **`notifications` consome** `user.registered`, `order.confirmed`, `order.cancelled` (mock email) |
 
 ---
 
@@ -324,4 +325,4 @@ Conclusão: suficiente para continuar Fases 5–6; fechar gaps na **Fase 7 — T
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 6 (continuação):** wire `notifications` no compose, publicar `user.registered` no auth, JWT guard + proxy no gateway.
+Seguir [roadmap.md](./roadmap.md) — **Fase 6 (continuação):** wire `notifications` no compose, JWT guard + proxy no gateway.

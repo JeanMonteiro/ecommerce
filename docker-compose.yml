@@ -153,6 +153,7 @@ services:
       JWT_HASH: ${JWT_HASH:?JWT_HASH is required — copy .env.example to .env}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
       DATABASE_URL: postgresql://${AUTH_DB_USER:-ecommerce_auth_user}:${AUTH_DB_PASSWORD:-ecommerce_auth_pass}@auth-db:5432/${AUTH_DB_NAME:-ecommerce_auth_database}?schema=public
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
     ports:
       - "${AUTH_PORT:-3001}:3000"
     depends_on:
@@ -271,11 +272,13 @@ services:
     restart: unless-stopped
     environment:
       GATEWAY_PORT: "3000"
+      JWT_HASH: ${JWT_HASH}
       AUTH_SERVICE_URL: http://auth:3000
       CATALOG_SERVICE_URL: http://catalog:3000
       INVENTORY_SERVICE_URL: http://inventory:3000
       CART_SERVICE_URL: http://cart:3000
       ORDERS_SERVICE_URL: http://orders:3000
+      NOTIFICATIONS_SERVICE_URL: http://notifications:3000
     ports:
       - "${GATEWAY_PORT:-3000}:3000"
     depends_on:
