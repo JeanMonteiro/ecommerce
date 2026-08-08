@@ -15,10 +15,10 @@ Leia a arquitetura antes de adicionar serviços, rotas ou eventos.
 
 ## Estado rápido
 
-- Implementado: `services/auth/`, `services/catalog/`, `services/inventory/`, `services/cart/`, `services/orders/`, `services/payment/`, `services/api-gateway/` (proxy auth + catalog + inventory + cart + orders — **sem** proxy payment)
+- Implementado: **8 serviços** — `auth`, `catalog`, `inventory`, `cart`, `orders`, `payment`, `notifications`, `api-gateway` (proxy unificado + JWT guard; payment interno, sem proxy)
 - Libs compartilhadas: `packages/auth-middleware/`, `packages/messaging/`
-- Compose raiz: RabbitMQ + 6 DBs + auth + catalog + inventory + cart + orders + payment + api-gateway
-- Alvo: 8 serviços + libs + RabbitMQ — ver docs
+- Compose raiz: RabbitMQ + 6 DBs + 8 serviços (Fases 1–6 concluídas)
+- Próximo: Fase 7 — Test coverage (ver [roadmap](./docs/roadmap.md))
 
 ## Stack alvo
 
@@ -26,7 +26,7 @@ Leia a arquitetura antes de adicionar serviços, rotas ou eventos.
 - RabbitMQ (`ecommerce.events`, topic)
 - API Gateway na porta 3000
 
-## Subir o stack local (Fase 5)
+## Subir o stack local (Fase 6)
 
 Na raiz do repositório:
 
@@ -45,6 +45,7 @@ docker compose up --build
 | orders (direto) | http://localhost:3004 |
 | inventory (direto) | http://localhost:3005 |
 | payment (direto, interno) | http://localhost:3006 — `GET /health` apenas |
+| notifications (direto) | http://localhost:3007 — `GET /api/notifications` (mock emails) |
 | RabbitMQ management | http://localhost:15672 (guest/guest por padrão) |
 | auth-db (host) | localhost:5433 |
 | catalog-db (host) | localhost:5434 |
@@ -60,6 +61,7 @@ Endpoints via gateway (`:3000`):
 - Inventory: `GET /api/inventory`, `GET/PATCH /api/inventory/:productId`
 - Cart (Bearer JWT): `GET/POST/DELETE /api/cart`, `PATCH/DELETE /api/cart/:productId`
 - Orders (Bearer JWT): `POST /api/orders` (202 PENDING), `GET /api/orders`, `GET /api/orders/:id`
+- Notifications (público): `GET /api/notifications` — lista mock emails em memória
 
 Health do gateway: `GET http://localhost:3000/health`
 
@@ -85,6 +87,12 @@ Health do gateway: `GET http://localhost:3000/health`
 
 Opcional: `PAYMENT_FORCE_RESULT=failure` no `.env` para simular falha de pagamento e compensação.
 
+### Fluxo Fase 6 (notifications)
+
+1. `POST http://localhost:3000/api/users` — auth publica `user.registered` → notifications envia welcome email mock
+2. Após checkout confirmado/cancelado (Fase 4–5) → notifications consome `order.confirmed` / `order.cancelled`
+3. `GET http://localhost:3000/api/notifications` — debug: lista emails mock em memória
+
 ## Desenvolvimento local (sem Docker para o gateway)
 
 Com os serviços já rodando (ex.: `docker compose up` ou cada serviço na porta local):
@@ -97,9 +105,10 @@ CATALOG_SERVICE_URL=http://localhost:3002 \
 INVENTORY_SERVICE_URL=http://localhost:3005 \
 CART_SERVICE_URL=http://localhost:3003 \
 ORDERS_SERVICE_URL=http://localhost:3004 \
+NOTIFICATIONS_SERVICE_URL=http://localhost:3007 \
 yarn dev
 ```
 
 ## Próximo passo
 
-Fase 6 do [roadmap](./docs/roadmap.md): **Notifications** (mock email/log) + JWT guard no gateway.
+Fase 7 do [roadmap](./docs/roadmap.md): **Test coverage** — messaging, gateway, contratos de evento, E2E compose e CI.

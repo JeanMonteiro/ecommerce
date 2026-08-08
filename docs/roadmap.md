@@ -113,7 +113,7 @@ Auditoria (pós–Fase 4): unitários dos 5 serviços passam (~44), mas pacotes 
 | 3. Cart | **Concluída** — `services/cart` (add/remove/list + HTTP catalog), compose raiz (`cart-db`, `cart`) e gateway proxy `/api/cart` |
 | 4. Orders + saga parcial | **Concluída** — `orders` (criar pedido 202 PENDING, `order.created`, consumers `stock.*`), `inventory` reserva em `order.created`, compose raiz (`orders-db`, `orders`) e gateway proxy `/api/orders` |
 | 5. Payment + fechar saga | **Concluída** — `payment` mock (`PAYMENT_FORCE_RESULT`), saga completa (`payment.succeeded` / `payment.failed` → `order.confirmed` / `order.cancelled`), compensação inventory + cart clear, compose raiz (`payment-db`, `payment`, `RABBITMQ_URL` no cart) |
-| 6. Notifications + Gateway | Pendente |
+| 6. Notifications + Gateway | **Concluída** — `notifications` mock email (consumers `user.registered`, `order.confirmed`, `order.cancelled`), compose raiz (`notifications`, sem DB), gateway proxy `/api/notifications` + JWT guard via `@ecommerce/auth-middleware` |
 | 7. Test coverage | Pendente — criada após auditoria: unitários OK nos serviços; faltam messaging, gateway, contratos, E2E e CI |
 | 8. Polish | Pendente |
 

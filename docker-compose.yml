@@ -265,6 +265,21 @@ services:
       rabbitmq:
         condition: service_started
 
+  notifications:
+    build:
+      # Repo root context: notifications depends on packages/messaging (file:../../...)
+      context: .
+      dockerfile: services/notifications/Dockerfile
+    restart: unless-stopped
+    environment:
+      NOTIFICATIONS_PORT: "3000"
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
+    ports:
+      - "${NOTIFICATIONS_PORT:-3007}:3000"
+    depends_on:
+      rabbitmq:
+        condition: service_started
+
   api-gateway:
     build:
       context: .
@@ -287,6 +302,7 @@ services:
       - inventory
       - cart
       - orders
+      - notifications
 
 volumes:
   auth-db-data:
