@@ -42,7 +42,11 @@ ecommerce/
 │   │   ├── app.ts
 │   │   ├── prisma/
 │   │   └── ...
-│   └── orders/              # microserviço de pedidos (Fase 4 — concluído)
+│   ├── orders/              # microserviço de pedidos (Fase 4 — concluído)
+│   │   ├── app.ts
+│   │   ├── prisma/
+│   │   └── ...
+│   └── payment/             # microserviço de pagamento mock (Fase 5 Step 1)
 │       ├── app.ts
 │       ├── prisma/
 │       └── ...
@@ -141,6 +145,19 @@ ecommerce/
 - **Compose raiz:** `inventory-db` + `inventory` com `DATABASE_URL` e `RABBITMQ_URL`
 - **TODO Fase 5:** release/commit reserva em `order.cancelled` / `payment.failed` / `order.confirmed`
 
+### payment (Fase 5 Step 1 — concluído)
+
+- Express + TypeScript + Prisma + PostgreSQL
+- `GET /health` apenas (serviço interno — sem rotas públicas de checkout)
+- Consome `stock.reserved` (queue `payment.stock-reserved`) via `@ecommerce/messaging`
+- Mock de cobrança via `PAYMENT_FORCE_RESULT`: `success` (default) | `failure` | `random`
+- Publica `payment.succeeded` `{ orderId, paymentId }` ou `payment.failed` `{ orderId, reason }`
+- Modelo Prisma `Payment` (`orderId` unique, `status` SUCCEEDED|FAILED, `reason` opcional)
+- Handler idempotente: pagamento existente → re-publica o evento correspondente
+- Porta **3006** local (`PAYMENT_PORT`); **3000** no container Docker
+- Testes Jest com Prisma e publish mockados (success, failure, idempotência)
+- **Ainda não no compose raiz** — wiring + saga completa no próximo passo
+
 ---
 
 ## Fluxo de eventos (Fase 2) e HTTP síncrono (Fase 3)
@@ -227,7 +244,7 @@ sequenceDiagram
 
 | Item | Status |
 |------|--------|
-| Microserviços (8) | `auth` + **api-gateway** + **`catalog`** + **`inventory`** + **`cart`** + **`orders`**; `payment` + `notifications` pendentes |
+| Microserviços (8) | `auth` + **api-gateway** + **`catalog`** + **`inventory`** + **`cart`** + **`orders`** + **`payment`** (Step 1); `notifications` pendente |
 | RabbitMQ | **No compose raiz**; **`catalog` publica** eventos; **`inventory` consome** `product.created` e **`order.created`**; **`orders` publica/consome** saga parcial |
 | api-gateway | **Stub Fase 4** — proxy auth + catalog + inventory + cart + orders; JWT guard na Fase 6 |
 | Monorepo `services/` + `packages/` | **Feito** |
@@ -270,4 +287,4 @@ Conclusão: suficiente para continuar Fases 5–6; fechar gaps na **Fase 7 — T
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 5:** `payment` mock + fechar saga (`payment.succeeded` / `payment.failed`, `order.confirmed` / `order.cancelled`).
+Seguir [roadmap.md](./roadmap.md) — **Fase 5 (continuação):** wiring `payment` no compose + `orders` consome `payment.*` + inventory/cart reagem a `order.confirmed` / `order.cancelled` / `payment.failed`.
