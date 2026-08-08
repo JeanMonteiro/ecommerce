@@ -92,7 +92,8 @@ ecommerce/
 
 - Pacote `@ecommerce/auth-middleware` — middleware Express para `Authorization: Bearer <token>`
 - Verifica JWT com `jsonwebtoken` + `JWT_HASH`; expõe `req.user` (`userId`, `username`)
-- Respostas 401 JSON em falha; testes unitários com `jwt.verify` mockado
+- Respostas 401 JSON em falha; **4 testes unitários** com `jwt.verify` mockado (`yarn test` OK — Fase 7 Step 1)
+- `jsonwebtoken` em `devDependencies` (peer em runtime); runner corrigido com `yarn install` no pacote
 - Consumido por `services/auth` em `GET /api/users` (dependência `file:../../packages/auth-middleware`)
 - Lib compartilhada — **não** é microserviço; sem Prisma/DB
 
@@ -101,6 +102,7 @@ ecommerce/
 - Pacote `@ecommerce/messaging` — helpers RabbitMQ compartilhados
 - `createMessagingClient()` conecta via `RABBITMQ_URL` (default `amqp://guest:guest@localhost:5672`)
 - Assert topic exchange `ecommerce.events`; `publish(routingKey, payload)` e `subscribe(pattern, queue, handler)`
+- **8 testes unitários** com `amqplib` mockado: assert exchange, publish JSON buffer, subscribe bind/ack, nack sem requeue (Fase 7 Step 1)
 - Consumido por `services/auth`, `services/catalog`, `services/inventory`, `services/cart`, `services/orders`, `services/payment` e `services/notifications`
 
 ### catalog (Fase 2 — concluído)
@@ -315,8 +317,8 @@ sequenceDiagram
 |------|----------|
 | Unitários `auth` / `orders` / `inventory` | Adequado (~44 testes passando nos 5 serviços) |
 | Unitários `catalog` / `cart` | Fino (faltam PATCH cart, alguns GETs/validações) |
-| `@ecommerce/auth-middleware` | Testes existem, runner quebrado (deps) |
-| `@ecommerce/messaging` | **Sem testes** |
+| `@ecommerce/auth-middleware` | **OK** — 4 testes, runner corrigido (Fase 7 Step 1) |
+| `@ecommerce/messaging` | **OK** — 8 testes com amqplib mockado (Fase 7 Step 1) |
 | `api-gateway` | **Sem testes** |
 | Contratos de evento / E2E compose / CI | **Ausentes** |
 
@@ -326,4 +328,4 @@ Conclusão: suficiente para continuar Fases 5–6; fechar gaps na **Fase 7 — T
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 7 — Test coverage:** messaging, gateway, contratos de evento, E2E compose e CI.
+Seguir [roadmap.md](./roadmap.md) — **Fase 7 — Test coverage (em progresso):** Step 1 concluído (pacotes compartilhados); próximo: gateway smoke tests, gaps unitários finos, contratos, E2E compose e CI.

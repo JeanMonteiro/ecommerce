@@ -78,8 +78,8 @@ Ordem pensada para aprender uma peça por vez, sem subir 8 serviços vazios de u
 Auditoria (pós–Fase 4): unitários dos 5 serviços passam (~44), mas pacotes compartilhados, gateway, contratos de evento, E2E e CI estão fracos ou ausentes. Esta fase fecha essa lacuna **depois** do fluxo de negócio completo (Fases 5–6), para o E2E cobrir a saga inteira.
 
 **Entrega**
-- Corrigir runners quebrados: `packages/auth-middleware` (deps/`jsonwebtoken`) e política de teste em `packages/messaging`
-- Unit tests para `@ecommerce/messaging` (publish/subscribe/ack/nack com mock do amqplib)
+- ~~Corrigir runners quebrados: `packages/auth-middleware` (deps/`jsonwebtoken`) e política de teste em `packages/messaging`~~ **Step 1 concluído**
+- ~~Unit tests para `@ecommerce/messaging` (publish/subscribe/ack/nack com mock do amqplib)~~ **Step 1 concluído** (8 testes)
 - Smoke tests do `api-gateway` (`/health` + proxy com upstream mockado)
 - Preencher gaps unitários finos: cart `PATCH`, catalog GET-by-id/validação de preço, auth JWT inválido/expirado
 - Contratos de evento compartilhados (fixtures/schemas) para `product.created`, `order.created`, `stock.*`, `payment.*`, `order.confirmed` / `order.cancelled`
@@ -114,7 +114,7 @@ Auditoria (pós–Fase 4): unitários dos 5 serviços passam (~44), mas pacotes 
 | 4. Orders + saga parcial | **Concluída** — `orders` (criar pedido 202 PENDING, `order.created`, consumers `stock.*`), `inventory` reserva em `order.created`, compose raiz (`orders-db`, `orders`) e gateway proxy `/api/orders` |
 | 5. Payment + fechar saga | **Concluída** — `payment` mock (`PAYMENT_FORCE_RESULT`), saga completa (`payment.succeeded` / `payment.failed` → `order.confirmed` / `order.cancelled`), compensação inventory + cart clear, compose raiz (`payment-db`, `payment`, `RABBITMQ_URL` no cart) |
 | 6. Notifications + Gateway | **Concluída** — `notifications` mock email (consumers `user.registered`, `order.confirmed`, `order.cancelled`), compose raiz (`notifications`, sem DB), gateway proxy `/api/notifications` + JWT guard via `@ecommerce/auth-middleware` |
-| 7. Test coverage | Pendente — criada após auditoria: unitários OK nos serviços; faltam messaging, gateway, contratos, E2E e CI |
+| 7. Test coverage | **Em progresso (Step 1 concluído)** — pacotes `@ecommerce/auth-middleware` (4 testes) e `@ecommerce/messaging` (8 testes) OK; faltam gateway, gaps unitários finos, contratos, E2E e CI |
 | 8. Polish | Pendente |
 
 Atualize a coluna **Status** conforme for avançando.
