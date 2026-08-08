@@ -2,9 +2,11 @@ import {
   createMessagingClient,
   type MessagingClient,
 } from '@ecommerce/messaging';
+import { handlePaymentEvent } from '../handlers/paymentEvents';
 import { handleStockEvent } from '../handlers/stockEvents';
 
 const STOCK_EVENTS_QUEUE = 'orders.stock-events';
+const PAYMENT_EVENTS_QUEUE = 'orders.payment-events';
 
 let client: MessagingClient | null = null;
 
@@ -13,6 +15,11 @@ export async function initMessaging(): Promise<MessagingClient> {
     client = await createMessagingClient();
     await client.subscribe('stock.*', STOCK_EVENTS_QUEUE, async (payload) => {
       await handleStockEvent(payload);
+    });
+    await client.subscribe('payment.*', PAYMENT_EVENTS_QUEUE, async (payload) => {
+      await handlePaymentEvent(payload, {
+        publish: (routingKey, eventPayload) => client!.publish(routingKey, eventPayload),
+      });
     });
   }
 

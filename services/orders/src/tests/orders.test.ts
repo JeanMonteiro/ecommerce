@@ -5,6 +5,11 @@ import { prismaMock } from '../libs/__mocks__/prisma.singleton';
 import { CartError, getCart } from '../libs/cartClient';
 import { publishEvent } from '../libs/messaging';
 import {
+  handlePaymentFailed,
+  handlePaymentSucceeded,
+  type PublishFn,
+} from '../handlers/paymentEvents';
+import {
   handleStockRejected,
   handleStockReserved,
 } from '../handlers/stockEvents';
@@ -266,6 +271,135 @@ describe('Stock event handlers', () => {
     await handleStockReserved({ orderId: 999, reservationId: 100 }, prismaMock);
 
     expect(warnSpy).toHaveBeenCalledWith('stock.reserved: unknown orderId 999');
+    warnSpy.mockRestore();
+  });
+});
+
+describe('Payment event handlers', () => {
+  const publish = jest.fn() as jest.MockedFunction<PublishFn>;
+
+  const awaitingPaymentOrder = {
+    id: 1,
+    userId: 1,
+    status: 'AWAITING_PAYMENT' as const,
+    total: new Decimal('39.98'),
+    createdAt: new Date('2025-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2025-01-01T00:00:00.000Z'),
+  };
+
+  const confirmedOrder = {
+    ...awaitingPaymentOrder,
+    status: 'CONFIRMED' as const,
+  };
+
+  const cancelledOrder = {
+    ...awaitingPaymentOrder,
+    status: 'CANCELLED' as const,
+  };
+
+  beforeEach(() => {
+    prismaMock.order.updateMany.mockReset();
+    prismaMock.order.findUnique.mockReset();
+    publish.mockReset();
+  });
+
+  it('should update status to CONFIRMED and publish order.confirmed on payment.succeeded', async () => {
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.order.findUnique.mockResolvedValue(confirmedOrder);
+
+    await handlePaymentSucceeded(
+      { orderId: 1, paymentId: 7 },
+      { db: prismaMock, publish },
+    );
+
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
+      where: { id: 1, status: 'AWAITING_PAYMENT' },
+      data: { status: 'CONFIRMED' },
+    });
+    expect(publish).toHaveBeenCalledWith('order.confirmed', {
+      orderId: 1,
+      userId: 1,
+    });
+  });
+
+  it('should re-publish order.confirmed when order is already CONFIRMED', async () => {
+    prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.order.findUnique.mockResolvedValue(confirmedOrder);
+
+    await handlePaymentSucceeded(
+      { orderId: 1, paymentId: 7 },
+      { db: prismaMock, publish },
+    );
+
+    expect(publish).toHaveBeenCalledWith('order.confirmed', {
+      orderId: 1,
+      userId: 1,
+    });
+  });
+
+  it('should not publish order.confirmed when order is not awaiting payment or confirmed', async () => {
+    prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.order.findUnique.mockResolvedValue({
+      ...awaitingPaymentOrder,
+      status: 'PENDING',
+    });
+
+    await handlePaymentSucceeded(
+      { orderId: 1, paymentId: 7 },
+      { db: prismaMock, publish },
+    );
+
+    expect(publish).not.toHaveBeenCalled();
+  });
+
+  it('should update status to CANCELLED and publish order.cancelled on payment.failed', async () => {
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.order.findUnique.mockResolvedValue(cancelledOrder);
+
+    await handlePaymentFailed(
+      { orderId: 1, reason: 'Payment declined (mock)' },
+      { db: prismaMock, publish },
+    );
+
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
+      where: { id: 1, status: 'AWAITING_PAYMENT' },
+      data: { status: 'CANCELLED' },
+    });
+    expect(publish).toHaveBeenCalledWith('order.cancelled', {
+      orderId: 1,
+      userId: 1,
+      reason: 'Payment declined (mock)',
+    });
+  });
+
+  it('should re-publish order.cancelled when order is already CANCELLED', async () => {
+    prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.order.findUnique.mockResolvedValue(cancelledOrder);
+
+    await handlePaymentFailed(
+      { orderId: 1, reason: 'Payment declined (mock)' },
+      { db: prismaMock, publish },
+    );
+
+    expect(publish).toHaveBeenCalledWith('order.cancelled', {
+      orderId: 1,
+      userId: 1,
+      reason: 'Payment declined (mock)',
+    });
+  });
+
+  it('should log unknown orderId on payment.failed without publishing', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.order.findUnique.mockResolvedValue(null);
+
+    await handlePaymentFailed(
+      { orderId: 999, reason: 'Payment declined (mock)' },
+      { db: prismaMock, publish },
+    );
+
+    expect(warnSpy).toHaveBeenCalledWith('payment.failed: unknown orderId 999');
+    expect(publish).not.toHaveBeenCalled();
     warnSpy.mockRestore();
   });
 });

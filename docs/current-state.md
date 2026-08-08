@@ -120,18 +120,19 @@ ecommerce/
 - **Gateway:** proxy `/api/cart`
 - **TODO Fase 5:** consumer `order.confirmed` → limpar carrinho
 
-### orders (Fase 4 — concluído)
+### orders (Fase 4 + Fase 5 Step 2)
 
 - Express + TypeScript + Prisma + PostgreSQL
 - Endpoints (JWT via `@ecommerce/auth-middleware`): `POST /api/orders` (202 PENDING), `GET /api/orders`, `GET /api/orders/:id`
 - HTTP interno para `cart`: `GET /api/cart` via `CART_SERVICE_URL` — **repassa o JWT** do usuário
 - Publica `order.created` no checkout (via `@ecommerce/messaging`)
 - Consome `stock.reserved` / `stock.rejected` (queue `orders.stock-events`, pattern `stock.*`) → atualiza status (`AWAITING_PAYMENT` / `CANCELLED`)
+- Consome `payment.succeeded` / `payment.failed` (queue `orders.payment-events`, pattern `payment.*`) → atualiza status (`CONFIRMED` / `CANCELLED`) e publica `order.confirmed` / `order.cancelled`
 - Porta **3004** local (`ORDERS_PORT`); **3000** no container Docker
 - Testes Jest + Supertest com Prisma, messaging e cart client mockados
 - **Compose raiz:** `orders-db` + `orders` com `DATABASE_URL`, `JWT_HASH`, `CART_SERVICE_URL` e `RABBITMQ_URL`
 - **Gateway:** proxy `/api/orders`
-- **Próximo passo Fase 5:** `payment` mock + fechar saga (`payment.succeeded` / `payment.failed`)
+- **Próximo passo Fase 5:** inventory release em `order.cancelled` / `payment.failed` + cart clear em `order.confirmed`
 
 ### inventory (Fase 2 + Fase 4 Step 2)
 
@@ -236,7 +237,9 @@ sequenceDiagram
 1. Checkout via gateway → `orders` lê carrinho via HTTP para `cart`, persiste pedido `PENDING` e publica `order.created`.
 2. `inventory` consome, reserva estoque e publica `stock.reserved` ou `stock.rejected`.
 3. `orders` consome `stock.*` e atualiza para `AWAITING_PAYMENT` ou `CANCELLED`.
-4. Cliente consulta `GET /api/orders/:id` — **sem payment ainda** (Fase 5).
+4. `payment` consome `stock.reserved`, cobra (mock) e publica `payment.succeeded` ou `payment.failed`.
+5. `orders` consome `payment.*` → `CONFIRMED` + `order.confirmed` ou `CANCELLED` + `order.cancelled`.
+6. Cliente consulta `GET /api/orders/:id` — saga fechada no orders; **inventory/cart ainda não reagem** (próximo passo).
 
 ---
 
@@ -252,7 +255,7 @@ sequenceDiagram
 | JWT com expiry | **Feito** (`24h` default) |
 | Validação de input | **Feito** |
 | Compose raiz | **Feito** (RabbitMQ + 5 DBs + auth + catalog + inventory + cart + orders + api-gateway) |
-| Eventos / consumers | **`catalog` publica** `product.created` / `product.updated`; **`inventory` consome** `product.created` e **`order.created`** (publica `stock.reserved` / `stock.rejected`); **`orders` publica** `order.created` e **consome** `stock.*` |
+| Eventos / consumers | **`catalog` publica** `product.created` / `product.updated`; **`inventory` consome** `product.created` e **`order.created`** (publica `stock.reserved` / `stock.rejected`); **`orders` publica** `order.created`, **consome** `stock.*` e **`payment.*`** (publica `order.confirmed` / `order.cancelled`); **`payment` consome** `stock.reserved` (publica `payment.succeeded` / `payment.failed`) |
 
 ---
 
@@ -287,4 +290,4 @@ Conclusão: suficiente para continuar Fases 5–6; fechar gaps na **Fase 7 — T
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 5 (continuação):** wiring `payment` no compose + `orders` consome `payment.*` + inventory/cart reagem a `order.confirmed` / `order.cancelled` / `payment.failed`.
+Seguir [roadmap.md](./roadmap.md) — **Fase 5 (continuação):** wiring `payment` no compose + inventory release + cart clear em `order.confirmed` / `order.cancelled`.
