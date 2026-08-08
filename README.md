@@ -18,7 +18,7 @@ Leia a arquitetura antes de adicionar serviços, rotas ou eventos.
 - Implementado: **8 serviços** — `auth`, `catalog`, `inventory`, `cart`, `orders`, `payment`, `notifications`, `api-gateway` (proxy unificado + JWT guard; payment interno, sem proxy)
 - Libs compartilhadas: `packages/auth-middleware/`, `packages/messaging/`, `packages/event-contracts/`
 - Compose raiz: RabbitMQ + 6 DBs + 8 serviços (Fases 1–6 concluídas)
-- Testes: `yarn test` na raiz (CI no GitHub Actions); E2E compose pendente (Fase 7 Step 4)
+- Testes: `yarn test` na raiz (CI no GitHub Actions); E2E compose via `yarn test:e2e` (local, requer Docker)
 
 ## Stack alvo
 
@@ -112,6 +112,49 @@ CI: workflow `.github/workflows/test.yml` executa `yarn test` em push/PR para `m
 
 Para testar um serviço isolado: `cd services/<nome> && yarn install && yarn test`.
 
+### E2E smoke (Fase 7 — checkout saga)
+
+Requer **Docker**, **curl** e **jq**. Não faz parte do `yarn test` padrão (stack completo + filas).
+
+**Pré-requisitos**
+
+```bash
+cp .env.example .env
+# Edite .env: JWT_HASH com string longa e aleatória (obrigatório)
+docker compose up -d --build
+# Aguarde o gateway responder (o script também faz wait em GET /health)
+```
+
+**Executar**
+
+```bash
+yarn test:e2e
+# ou: bash scripts/e2e-checkout.sh
+```
+
+Variáveis opcionais:
+
+| Variável | Default | Descrição |
+|----------|---------|-----------|
+| `GATEWAY_URL` | `http://localhost:3000` | Base URL do api-gateway |
+| `PAYMENT_FORCE_RESULT` | `success` | `success` → assert `CONFIRMED`; `failure` → assert `CANCELLED` |
+| `ORDER_TIMEOUT` | `60` | Segundos para poll de `GET /api/orders/:id` |
+| `HEALTH_TIMEOUT` | `120` | Segundos para wait em `GET /health` |
+
+**Fluxo automatizado** (via gateway `:3000`):
+
+1. `POST /api/users` — register
+2. `POST /api/auth` — login → JWT
+3. `POST /api/products` — criar produto (JWT)
+4. Poll `GET /api/inventory/:productId` até stock existir (consumer `product.created`)
+5. `PATCH /api/inventory/:productId` — quantity > 0 (JWT)
+6. `POST /api/cart` — adicionar item (JWT)
+7. `POST /api/orders` — checkout → **202 PENDING**
+8. Poll `GET /api/orders/:id` até `CONFIRMED` ou `CANCELLED`
+9. Assert outcome conforme `PAYMENT_FORCE_RESULT`; verifica mock emails em `GET /api/notifications`
+
+CI opcional: `.github/workflows/e2e.yml` (`workflow_dispatch` manual — não roda no push).
+
 ## Desenvolvimento local (sem Docker para o gateway)
 
 Com os serviços já rodando (ex.: `docker compose up` ou cada serviço na porta local):
@@ -130,4 +173,4 @@ yarn dev
 
 ## Próximo passo
 
-Fase 7 do [roadmap](./docs/roadmap.md): **Test coverage** — E2E compose (Step 4); CI e runner raiz concluídos (Step 3).
+Fase 8 do [roadmap](./docs/roadmap.md): **Polish** — idempotência, DLQ/outbox opcional, DX final.

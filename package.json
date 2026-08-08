@@ -2,6 +2,7 @@
   "name": "ecommerce",
   "private": true,
   "scripts": {
-    "test": "node scripts/run-all-tests.js"
+    "test": "node scripts/run-all-tests.js",
+    "test:e2e": "bash scripts/e2e-checkout.sh"
   }
 }

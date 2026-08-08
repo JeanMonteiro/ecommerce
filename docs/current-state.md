@@ -55,9 +55,11 @@ ecommerce/
 │       └── ...
 ├── package.json             # runner raiz: yarn test → scripts/run-all-tests.js
 ├── scripts/
-│   └── run-all-tests.js     # instala + jest em todos os packages/services
+│   ├── run-all-tests.js     # instala + jest em todos os packages/services
+│   └── e2e-checkout.sh      # smoke E2E via api-gateway (bash + curl + jq)
 ├── .github/workflows/
-│   └── test.yml             # CI: yarn test no push/PR (Node 18)
+│   ├── test.yml             # CI: yarn test no push/PR (Node 18)
+│   └── e2e.yml              # opcional: workflow_dispatch → docker compose + yarn test:e2e
 ├── packages/
 │   ├── auth-middleware/     # lib JWT compartilhada (@ecommerce/auth-middleware)
 │   ├── event-contracts/     # validators + fixtures de eventos (@ecommerce/event-contracts)
@@ -336,7 +338,7 @@ sequenceDiagram
 | `@ecommerce/messaging` | **OK** — 8 testes com amqplib mockado (Fase 7 Step 1) |
 | `@ecommerce/event-contracts` | **OK** — 19 testes, fixtures + validators (Fase 7 Step 2) |
 | `api-gateway` | Smoke tests (`/health`, proxy, JWT guard) |
-| Contratos de evento / E2E compose / CI | Contratos **OK**; CI **OK** (Step 3 — `yarn test` raiz + `.github/workflows/test.yml`); E2E compose **ausente** (Step 4) |
+| Contratos de evento / E2E compose / CI | Contratos **OK**; CI **OK** (`yarn test` + `.github/workflows/test.yml`); E2E compose **OK** (`yarn test:e2e` + `scripts/e2e-checkout.sh`; local-only por padrão, workflow opcional `e2e.yml`) |
 
 Conclusão: suficiente para continuar Fases 5–6; fechar gaps na **Fase 7 — Test coverage** (ver roadmap).
 
@@ -344,4 +346,4 @@ Conclusão: suficiente para continuar Fases 5–6; fechar gaps na **Fase 7 — T
 
 ## Próximo passo
 
-Seguir [roadmap.md](./roadmap.md) — **Fase 7 — Test coverage (em progresso):** Step 3 concluído (runner raiz + CI); próximo: E2E compose (Step 4).
+Seguir [roadmap.md](./roadmap.md) — **Fase 8 — Polish** (idempotência reforçada, DLQ/outbox opcional, DX final).

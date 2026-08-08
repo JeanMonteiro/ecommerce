@@ -1,0 +1,24 @@
+# Manual E2E smoke — not part of default CI (requires Docker + full stack).
+name: E2E checkout smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env from example
+        run: |
+          cp .env.example .env
+          sed -i 's/JWT_HASH=change-me-to-a-long-random-string/JWT_HASH=ci-e2e-jwt-secret-min-32-chars-long/' .env
+
+      - name: Start stack
+        run: docker compose up -d --build --wait
+
+      - name: Run E2E smoke
+        run: yarn test:e2e

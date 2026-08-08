@@ -45,4 +45,4 @@ Código em `services/auth/`, `services/api-gateway/`, `services/catalog/`, `serv
 3. Não compartilhe banco entre serviços.
 4. Não encadeie HTTP longo no checkout — use a saga por eventos.
 5. Consumers devem tender a ser **idempotentes** (obrigatório na Fase 8 — Polish).
-6. Após o fluxo de negócio (Fases 5–6), a **Fase 7 — Test coverage** fecha gaps: messaging, gateway, contratos de evento, E2E e CI. Não trate unitários mockados como prova do saga ponta a ponta.
+6. Após o fluxo de negócio (Fases 5–6), a **Fase 7 — Test coverage** fecha gaps: messaging, gateway, contratos de evento, E2E e CI. E2E local: `yarn test:e2e` (`scripts/e2e-checkout.sh`, requer Docker). Não trate unitários mockados como prova do saga ponta a ponta.
